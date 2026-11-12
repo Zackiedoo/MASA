@@ -1,0 +1,13 @@
+# Hourly Freedom Wall cleanup. Vercel's free (Hobby) plan only allows ONE cron run per day, so this
+# workflow calls the same endpoint every hour. Add two repository secrets:
+#   MASA_URL      e.g. https://your-app.vercel.app
+#   CRON_SECRET   same value as the CRON_SECRET environment variable on Vercel
+name: Freedom Wall cleanup
+on:
+  schedule: [{ cron: '7 * * * *' }]
+  workflow_dispatch:
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl --fail-with-body -sS -X POST -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.MASA_URL }}/api/cron/cleanup"

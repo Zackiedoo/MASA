@@ -1,0 +1,40 @@
+rules_version = '2';
+// Storage can't read the Realtime Database, so roles come from custom claims
+// (set by /api/admin/users when an account is created or its role changes).
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function role() { return request.auth.token.role; }
+    function isAdmin() { return signedIn() && role() == 'admin'; }
+    function okType() {
+      return request.resource.contentType.matches('image/(png|jpeg|webp|gif)')
+          || request.resource.contentType == 'application/pdf'
+          || request.resource.contentType.matches('application/(msword|vnd.openxmlformats-officedocument.*|vnd.ms-.*)')
+          || request.resource.contentType == 'text/plain';
+    }
+    function okSize() { return request.resource.size < 10 * 1024 * 1024; }
+
+    // Announcement images / attachments, namespaced by the uploader's uid.
+    match /announcements/{uid}/{file} {
+      allow read: if true;
+      allow create, update: if signedIn() && request.auth.uid == uid
+                            && (role() == 'admin' || role() == 'organization') && okType() && okSize();
+      allow delete: if signedIn() && (request.auth.uid == uid || isAdmin());
+    }
+    // Memorandum source documents — administrators only.
+    match /memoranda/{file} {
+      allow read: if true;
+      allow create, update: if isAdmin() && okType() && okSize();
+      allow delete: if isAdmin();
+    }
+    // Organization logos.
+    match /orgs/{orgId}/{file} {
+      allow read: if true;
+      allow create, update: if signedIn() && request.resource.contentType.matches('image/(png|jpeg|webp)') && okSize()
+                            && (isAdmin() || (role() == 'organization' && request.auth.token.orgId == orgId));
+      allow delete: if isAdmin() || (signedIn() && role() == 'organization' && request.auth.token.orgId == orgId);
+    }
+    // Everything else is closed.
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}
