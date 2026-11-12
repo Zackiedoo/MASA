@@ -110,9 +110,9 @@
           ".validate": "newData.isString() && newData.val().length <= 80"
         },
         "attachments": {
-          ".validate": "newData.hasChildren() && newData.numChildren() <= 10",
+          ".validate": "newData.hasChildren()",
           "$i": {
-            ".validate": "newData.hasChildren(['name','url','type'])",
+            ".validate": "$i.matches(/^[0-9]$/) && newData.hasChildren(['name','url','type'])",
             "name": {
               ".validate": "newData.isString() && newData.val().length <= 200 && newData.val().length >= 1"
             },
