@@ -31,7 +31,7 @@ const user = await getAuth().createUser({ email: `${loginId.toLowerCase()}@${dom
 await getAuth().setCustomUserClaims(user.uid, { role: 'admin' });
 await getDatabase().ref(`users/${user.uid}`).set({
   studentId: loginId, fullName, nickname: fullName.split(' ')[0].slice(0, 30).padEnd(2, '_'), bio: '', role: 'admin',
-  avatar: 'owl', avatarColor: '#F2D98D', createdAt: Date.now(), isActive: true, mustChangePassword: true,
+  avatar: 'owl', avatarColor: '#F2D98D', createdAt: Date.now(), isActive: true, approvalStatus: 'approved', mustChangePassword: true,
 });
 await getDatabase().ref('settings').update({ termsVersion: '1.0', freedomWall: { requireApproval: false } });
 console.log(`\nAdministrator created.\n  Login ID: ${loginId}\n  Temporary password: ${password}\n`);

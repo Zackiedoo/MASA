@@ -3,6 +3,7 @@
 // and the navigation badge, so both stay in sync from a single set of listeners.
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { isApproved } from '../lib/permissions';
 import { useMultiValue, useValue } from '../hooks/useValue';
 import { toList } from '../utils/format';
 import type { JoinRequest, MembershipStatus, Subject, SubjectMeta } from '../types';
@@ -22,11 +23,12 @@ interface SubjectsState {
 const Ctx = createContext<SubjectsState | null>(null);
 
 export function SubjectsProvider({ children }: { children: ReactNode }) {
-  const { uid, role } = useAuth();
-  const signedIn = !!uid && !!role;
+  const { uid, role, profile } = useAuth();
+  // Pending / rejected / disabled accounts have no access to course data (the database rules enforce this too).
+  const signedIn = !!uid && !!role && isApproved(profile);
   const { data: subjectsRaw, loading: l1 } = useValue<Record<string, Omit<Subject, 'id'>>>(signedIn ? 'subjects' : null);
-  const { data: mine, loading: l2 } = useValue<Record<string, MembershipStatus>>(uid && role === 'student' ? `userSubjects/${uid}` : null);
-  const { data: reads } = useValue<Record<string, number>>(uid ? `userReads/${uid}` : null);
+  const { data: mine, loading: l2 } = useValue<Record<string, MembershipStatus>>(signedIn && uid && role === 'student' ? `userSubjects/${uid}` : null);
+  const { data: reads } = useValue<Record<string, number>>(signedIn && uid ? `userReads/${uid}` : null);
 
   const allSubjects = useMemo(() => toList<Subject>(subjectsRaw), [subjectsRaw]);
   const visible = useMemo(() => {

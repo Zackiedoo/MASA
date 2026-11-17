@@ -31,7 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!uid) return;
     return watch<Omit<UserProfile, 'uid'>>(`users/${uid}`, (p) => {
       if (!p) { setNotice('This account has not been set up yet. Please contact an administrator.'); void signOutUser(); return; }
-      if (p.isActive === false) { setNotice('This account has been disabled. Please contact an administrator.'); void signOutUser(); return; }
+      // Pending / rejected registrations stay signed in (to see their status); a disabled approved account is signed out.
+      if (p.isActive === false && (p.approvalStatus ?? 'approved') === 'approved') { setNotice('This account has been disabled. Please contact an administrator.'); void signOutUser(); return; }
       setProfile({ ...p, uid });
       setProfileReady(true);
     }, () => { setNotice('Could not load your profile.'); setProfileReady(true); });

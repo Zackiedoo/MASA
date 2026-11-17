@@ -2,7 +2,7 @@
 // It exists so the app can be explored before Firebase is configured. It enforces NO security rules
 // and its data never leaves this browser. The UI shows a banner whenever it is active.
 type Listener = () => void;
-const KEY = 'masa-demo-db-v1';
+const KEY = 'masa-demo-db-v2';
 export const DEMO_PASSWORD = 'demo1234';
 
 let data: Record<string, any> = {};

@@ -8,19 +8,23 @@ export const DEMO_ACCOUNTS = [
   { id: 'ictsoc', label: 'Organization (ICT Society)' },
   { id: '2024-0001', label: 'Student (Ana)' },
   { id: '2024-0002', label: 'Student (Ben)' },
+  { id: 'prof-newbie', label: 'Professor awaiting approval' },
 ];
 
 export function buildSeed(): Record<string, any> {
   const t = Date.now();
   const H = 3600000, D = 86400000;
   const user = (uid: string, studentId: string, fullName: string, nickname: string, role: string, avatar: string, avatarColor: string, extra: object = {}) =>
-    [uid, { studentId, fullName, nickname, bio: '', role, avatar, avatarColor, createdAt: t - 30 * D, isActive: true, ...extra }] as const;
+    [uid, { studentId, fullName, nickname, bio: '', role, avatar, avatarColor, createdAt: t - 30 * D, isActive: true, approvalStatus: 'approved', ...extra }] as const;
   const users = Object.fromEntries([
     user('u-admin', 'admin', 'Site Administrator', 'Admin', 'admin', 'owl', '#F2D98D'),
     user('u-prof', 'prof-reyes', 'Prof. Marites Reyes', 'Ma\'am Reyes', 'professor', 'cat', '#D4AF37'),
     user('u-org', 'ictsoc', 'ICT Society Officer', 'ICTSoc', 'organization', 'panda', '#800020', { orgId: 'org-ictsoc' }),
     user('u-s1', '2024-0001', 'Ana Dela Cruz', 'Ana', 'student', 'fox', '#F2D98D', { bio: 'BSIT 2. Coffee, code, repeat.' }),
     user('u-s2', '2024-0002', 'Ben Santos', 'Ben', 'student', 'frog', '#BFD8C0'),
+    user('u-s3', '2024-0003', 'Carla Mendoza', 'Carla', 'student', 'koala', '#F2D98D'),
+    user('u-pend1', 'prof-newbie', 'Prof. Daniel Cruz', 'Prof Dan', 'professor', 'owl', '#F2D98D', { isActive: false, approvalStatus: 'pending', registration: { contactEmail: 'dcruz@example.edu', note: 'Teaching IT303 (Databases) this semester.' } }),
+    user('u-pend2', 'chess-club', 'Chess Club Officer', 'Chess', 'organization', 'cat', '#D4AF37', { isActive: false, approvalStatus: 'pending', registration: { contactEmail: 'chess@example.edu', orgName: 'ICT Chess Club', orgDescription: 'Weekly casual and rated chess games.', note: 'Club secretary.' } }),
   ]);
   return {
     users,
@@ -57,7 +61,15 @@ export function buildSeed(): Record<string, any> {
       s101: { '2024-0001': { fullName: 'Ana Dela Cruz' }, '2024-0002': { fullName: 'Ben Santos' } },
       s202: { '2024-0001': { fullName: 'Ana Dela Cruz' } },
     },
-    subjectMembers: { s101: { 'u-s1': true, 'u-s2': true } },
+    subjectMembers: {
+      s101: { 'u-s1': { studentId: '2024-0001', fullName: 'Ana Dela Cruz', enrolledAt: t - 10 * D, by: 'u-prof' }, 'u-s2': { studentId: '2024-0002', fullName: 'Ben Santos', enrolledAt: t - 10 * D, by: 'u-prof' } },
+    },
+    studentIndex: {
+      '2024-0001': { uid: 'u-s1', fullName: 'Ana Dela Cruz' },
+      '2024-0002': { uid: 'u-s2', fullName: 'Ben Santos' },
+      '2024-0003': { uid: 'u-s3', fullName: 'Carla Mendoza' },
+    },
+    userPosts: { 'u-s1': { w1: true }, 'u-s2': { w2: true } },
     userSubjects: { 'u-s1': { s101: 'approved' }, 'u-s2': { s101: 'approved' } },
     joinRequests: {},
     classSchedules: {

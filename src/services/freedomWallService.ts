@@ -28,13 +28,19 @@ export async function createPost(p: UserProfile, content: string, anonymous: boo
   await patch({
     [`${requireApproval ? 'freedomWallQueue' : 'freedomWall'}/${id}`]: post,
     [`freedomWallPrivate/${id}`]: { uid: p.uid, studentId: p.studentId, fullName: p.fullName },
+    [`userPosts/${p.uid}/${id}`]: true, // lets the author's own posts be recognised (and edited/deleted) without exposing identities
     [`rateLimits/${p.uid}/post`]: stamp(),
   });
   return { id, pending: requireApproval };
 }
 
-export async function deleteOwnPost(id: string) {
-  await patch({ [`freedomWall/${id}`]: null, [`freedomWallPrivate/${id}`]: null });
+export async function deleteOwnPost(uid: string, id: string) {
+  await patch({ [`freedomWall/${id}`]: null, [`freedomWallPrivate/${id}`]: null, [`userPosts/${uid}/${id}`]: null });
+}
+
+/** Author edits their own post's text (only while moderation-first mode is off; the rules enforce this). */
+export async function editOwnPost(id: string, content: string) {
+  await patch({ [`freedomWall/${id}/content`]: content, [`freedomWall/${id}/editedAt`]: stamp() });
 }
 
 export async function reportPost(uid: string, postId: string, reason: string) {
@@ -64,9 +70,30 @@ export async function rejectQueued(admin: string, post: WallPost) {
 export async function removePost(admin: string, post: WallPost, reports: Report[]) {
   const ident = await read<WallIdentity>(`freedomWallPrivate/${post.id}`);
   const updates: Record<string, unknown> = { [`freedomWall/${post.id}`]: null, [`freedomWallQueue/${post.id}`]: null };
+  if (ident?.uid) updates[`userPosts/${ident.uid}/${post.id}`] = null;
   for (const r of reports) updates[`reports/${r.id}/status`] = 'actioned';
   await patch(updates);
   await logActivity(admin, 'moderation.remove', `post ${post.id} (author ${ident?.studentId ?? 'unknown'})`);
+}
+
+/** Temporarily hides a post from the wall (reversible), keeping its identity record. Admin only. */
+export async function hidePost(admin: string, post: WallPost) {
+  await patch({
+    [`freedomWall/${post.id}`]: null,
+    [`freedomWallQueue/${post.id}`]: { authorLabel: post.authorLabel, anonymous: post.anonymous, content: post.content, createdAt: post.createdAt, expiresAt: post.expiresAt, status: 'hidden', decidedBy: admin, decidedAt: stamp() },
+  });
+  await logActivity(admin, 'moderation.hide', `post ${post.id}`);
+}
+export async function unhidePost(admin: string, post: WallPost) {
+  await patch({
+    [`freedomWallQueue/${post.id}`]: null,
+    [`freedomWall/${post.id}`]: { authorLabel: post.authorLabel, anonymous: post.anonymous, content: post.content, createdAt: post.createdAt, expiresAt: post.expiresAt, status: 'approved' },
+  });
+  await logActivity(admin, 'moderation.unhide', `post ${post.id}`);
+}
+export async function flagPost(admin: string, post: WallPost, flagged: boolean) {
+  await patch({ [`freedomWall/${post.id}/flagged`]: flagged ? true : null });
+  await logActivity(admin, flagged ? 'moderation.flag' : 'moderation.unflag', `post ${post.id}`);
 }
 
 export async function dismissReport(admin: string, r: Report) {

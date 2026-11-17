@@ -10,8 +10,6 @@ import { cleanText, hasBlockedWord } from '../../utils/validation';
 import { useToast } from '../../contexts/ToastContext';
 import type { UserProfile } from '../../types';
 
-export const MY_POSTS_KEY = 'masa-my-wall-posts';
-
 export function PostComposer({ open, onClose, profile, requireApproval }: { open: boolean; onClose: () => void; profile: UserProfile; requireApproval: boolean }) {
   const toast = useToast();
   const [text, setText] = useState('');
@@ -28,8 +26,7 @@ export function PostComposer({ open, onClose, profile, requireApproval }: { open
     if (hasBlockedWord(content)) return setErr('Your post contains language that is not allowed on the Freedom Wall.');
     setBusy(true);
     try {
-      const { id, pending } = await createPost(profile, content, anon, hours, requireApproval);
-      try { const l = JSON.parse(localStorage.getItem(MY_POSTS_KEY) || '[]') as string[]; localStorage.setItem(MY_POSTS_KEY, JSON.stringify([id, ...l].slice(0, 200))); } catch { /* ignore */ }
+      const { pending } = await createPost(profile, content, anon, hours, requireApproval);
       toast(pending ? 'Submitted! Your post will appear once an administrator approves it.' : 'Posted to the Freedom Wall.');
       setText(''); onClose();
     } catch (x) { setErr(explainError(x)); } finally { setBusy(false); }

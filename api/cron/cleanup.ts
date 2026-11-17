@@ -14,11 +14,19 @@ export default route(['GET', 'POST'], async (req: VercelRequest, res: VercelResp
   const expired = await db.ref('freedomWall').orderByChild('expiresAt').endAt(now).get();
   const updates: Record<string, null> = {};
   const ids: string[] = [];
+  const db2 = db;
+  const owners: Array<[string, string]> = [];
   expired.forEach((child) => {
     ids.push(child.key as string);
     updates[`freedomWall/${child.key}`] = null;
     updates[`freedomWallPrivate/${child.key}`] = null;
   });
+  // also drop each author's private "my posts" marker
+  for (const id of ids) {
+    const uidOfAuthor = (await db2.ref(`freedomWallPrivate/${id}/uid`).get()).val();
+    if (uidOfAuthor) owners.push([uidOfAuthor, id]);
+  }
+  owners.forEach(([u, id]) => { updates[`userPosts/${u}/${id}`] = null; });
   // Reports are keyed `${postId}_${uid}` and indexed by postId.
   for (const id of ids) {
     const reps = await db.ref('reports').orderByChild('postId').equalTo(id).get();

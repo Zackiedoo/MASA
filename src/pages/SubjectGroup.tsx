@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Bell, CalendarDays, Megaphone, Send, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, Bell, CalendarDays, GraduationCap, Megaphone, Send, Trash2, Users } from 'lucide-react';
 import { AuthGate } from '../components/shared/AuthGate';
 import { PageHeader } from '../components/navigation/PageHeader';
 import { Modal } from '../components/shared/Modal';
@@ -9,6 +9,7 @@ import { Field, Segmented } from '../components/shared/Field';
 import { ScheduleModal } from '../components/schedule/ScheduleModal';
 import { ProfessorSchedulePanel } from '../components/schedule/ProfessorSchedulePanel';
 import { RequestsPanel } from '../components/messages/RequestsPanel';
+import { RosterPanel } from '../components/messages/RosterPanel';
 import { useAuth } from '../contexts/AuthContext';
 import { useSubjects } from '../contexts/SubjectsContext';
 import { useToast } from '../contexts/ToastContext';
@@ -34,6 +35,7 @@ function Group() {
   const [tab, setTab] = useState<Tab>('updates');
   const [sched, setSched] = useState(false);
   const [reqOpen, setReqOpen] = useState(false);
+  const [rosterOpen, setRosterOpen] = useState(false);
   const [composeUpdate, setComposeUpdate] = useState(false);
 
   const msgsRaw = useValue<Record<string, Omit<ChatMessage, 'id'>>>(allowed ? `messages/${subjectId}` : null, { limitLast: 150, orderBy: 'createdAt' });
@@ -50,7 +52,7 @@ function Group() {
 
   if (loading) return <Spinner />;
   if (!subject) return <NotFound />;
-  if (!allowed || !profile) return <Empty title="You don't have access to this group" hint="Join the subject from Messages → Add subject. Your professor must approve the request first." action={<Link to="/messages" className="btn btn-primary">Back to Messages</Link>} />;
+  if (!allowed || !profile) return <Empty title="You don't have permission to open this course" hint={role === 'student' ? 'You can see a course once your professor enrolls you or approves your join request (Messages → Add subject).' : 'This course is not assigned to you.'} action={<Link to="/messages" className="btn btn-primary">Back to Messages</Link>} />;
   const pending = requests[subjectId]?.length ?? 0;
 
   return (
@@ -62,6 +64,7 @@ function Group() {
       />
       <section className="glass card mb-4 flex flex-wrap items-center gap-3 p-4">
         <div className="min-w-0 flex-1"><h1 className="truncate text-lg font-extrabold">{subject.subjectName}</h1><p className="flex items-center gap-1.5 text-sm text-muted"><Users className="h-3.5 w-3.5" />{subject.professorName}</p>{subject.description && <p className="mt-1 text-xs text-muted">{subject.description}</p>}</div>
+        {(isProf || role === 'admin') && <button className="btn btn-ghost btn-sm" onClick={() => setRosterOpen(true)}><GraduationCap className="h-4 w-4" />Students</button>}
         {isProf && <button className="btn btn-ghost btn-sm" onClick={() => setReqOpen(true)}><Bell className="h-4 w-4" />Requests{pending > 0 && <Badge tone="gold">{pending}</Badge>}</button>}
       </section>
 
@@ -83,9 +86,10 @@ function Group() {
           onSend={async (t) => { await sendMessage(subjectId, profile, t); }} />
       )}
 
-      {isProf ? (
-        <Modal open={sched} onClose={() => setSched(false)} title={`${subject.subjectCode} schedule`} wide><ProfessorSchedulePanel subject={subject} actorUid={profile.uid} /></Modal>
+      {isProf || role === 'admin' ? (
+        <Modal open={sched} onClose={() => setSched(false)} title={`${subject.subjectCode} schedule`} wide><ProfessorSchedulePanel subject={subject} actorUid={profile.uid} canEditSlots={role === 'admin'} /></Modal>
       ) : <ScheduleModal open={sched} onClose={() => setSched(false)} subjects={[subject]} />}
+      {(isProf || role === 'admin') && <RosterPanel open={rosterOpen} onClose={() => setRosterOpen(false)} subject={subject} actorUid={profile.uid} />}
       {isProf && <RequestsPanel open={reqOpen} onClose={() => setReqOpen(false)} subjects={[subject]} profUid={profile.uid} />}
       {isProf && <UpdateComposer open={composeUpdate} onClose={() => setComposeUpdate(false)} onSubmit={async (t, c, k) => { await postClassUpdate(subjectId, profile, t, c, k); toast('Posted to the group.'); }} />}
     </>

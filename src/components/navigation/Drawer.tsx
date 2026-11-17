@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FileText, LayoutDashboard, LogIn, LogOut, Megaphone, Settings, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Wordmark } from '../shared/Logo';
+import { ROLE_LABEL, isApproved } from '../../lib/permissions';
 import { ProfileAvatar } from '../shared/Avatar';
 import { useEffect, type ReactNode } from 'react';
 
@@ -30,12 +31,12 @@ export function Drawer({ open, onClose }: { open: boolean; onClose: () => void }
             {profile && (
               <div className="mb-2 flex items-center gap-3 rounded-2xl bg-primary/8 p-3">
                 <ProfileAvatar avatar={profile.avatar} color={profile.avatarColor} size={44} />
-                <div className="min-w-0"><p className="truncate text-sm font-bold">{profile.fullName}</p><p className="text-xs capitalize text-muted">{profile.role}</p></div>
+                <div className="min-w-0"><p className="truncate text-sm font-bold">{profile.fullName}</p><p className="text-xs text-muted">{ROLE_LABEL[profile.role]}</p></div>
               </div>
             )}
             <Item to="/settings" icon={<Settings className="h-5 w-5" />} onClick={onClose}>Settings</Item>
-            {(role === 'organization' || role === 'admin') && <Item to="/publish" icon={<Megaphone className="h-5 w-5" />} onClick={onClose}>Publish announcements</Item>}
-            {role === 'admin' && <Item to="/admin" icon={<LayoutDashboard className="h-5 w-5" />} onClick={onClose}>Administrator dashboard</Item>}
+            {isApproved(profile) && (role === 'organization' || role === 'admin') && <Item to="/publish" icon={<Megaphone className="h-5 w-5" />} onClick={onClose}>Publish announcements</Item>}
+            {isApproved(profile) && role === 'admin' && <Item to="/admin" icon={<LayoutDashboard className="h-5 w-5" />} onClick={onClose}>Administrator dashboard</Item>}
             <p className="mt-3 px-4 text-[11px] font-bold uppercase tracking-wider text-muted">Legal</p>
             <Item to="/legal/terms" icon={<FileText className="h-5 w-5" />} onClick={onClose}>Terms of Service</Item>
             <Item to="/legal/privacy" icon={<ShieldCheck className="h-5 w-5" />} onClick={onClose}>Privacy Policy</Item>

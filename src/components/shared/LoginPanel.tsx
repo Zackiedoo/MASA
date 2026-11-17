@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { isDemoMode } from '../../lib/firebase';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../../lib/demoSeed';
@@ -31,16 +32,17 @@ export function LoginPanel({ reason }: { reason?: string }) {
           <LogoMark size={64} />
           <div>
             <h1 className="text-2xl font-extrabold tracking-[0.18em] gradient-text">MASA</h1>
-            <p className="mt-1 text-sm text-muted">{reason ?? 'Sign in with your Student ID to continue.'}</p>
+            <p className="mt-1 text-sm text-muted">{reason ?? 'Log in to continue.'}</p>
           </div>
         </div>
         {(err || notice) && <ErrorBox message={(err || notice) as string} />}
         <form onSubmit={submit} className="space-y-4">
-          <Field label="Student ID">{(fid) => <input id={fid} className="field" value={id} onChange={(e) => setId(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="e.g. 2024-0001" required />}</Field>
+          <Field label="Student ID / Username">{(fid) => <input id={fid} className="field" value={id} onChange={(e) => setId(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="e.g. 2024-0001" required />}</Field>
           <Field label="Password">{(fid) => <PasswordInput id={fid} value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" placeholder="Your password" required />}</Field>
           <button className="btn btn-primary w-full" disabled={busy}>{busy ? 'Signing in…' : 'Log in'}</button>
         </form>
         <button className="mx-auto block text-sm font-semibold text-link underline-offset-2 hover:underline" onClick={() => setForgot(true)}>Forgot password?</button>
+        <p className="text-center text-xs text-muted">Professor or student organization? <Link to="/register" className="font-semibold text-link hover:underline">Request an account</Link></p>
         {isDemoMode && (
           <div className="rounded-2xl border border-gold/40 bg-softgold/30 p-3 text-xs">
             <p className="mb-2 font-semibold">Demo accounts (password <code>{DEMO_PASSWORD}</code>)</p>

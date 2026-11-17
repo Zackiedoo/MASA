@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react';
-import { BookOpen, Building2, Flag, LayoutDashboard, Megaphone, ScrollText, Settings2, Users } from 'lucide-react';
+import { BookOpen, Building2, Flag, LayoutDashboard, Megaphone, ScrollText, Settings2, UserCheck, Users } from 'lucide-react';
 import { AuthGate } from '../components/shared/AuthGate';
 import { PageHeader } from '../components/navigation/PageHeader';
 import { Overview } from '../components/admin/Overview';
 import { UsersTab } from '../components/admin/UsersTab';
+import { ApprovalsTab } from '../components/admin/ApprovalsTab';
 import { OrgsTab } from '../components/admin/OrgsTab';
 import { AnnouncementsTab } from '../components/admin/AnnouncementsTab';
 import { ModerationTab } from '../components/admin/ModerationTab';
@@ -13,6 +14,7 @@ import { SettingsTab } from '../components/admin/SettingsTab';
 
 const TABS: Array<{ id: string; label: string; icon: typeof Users }> = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'approvals', label: 'Approvals', icon: UserCheck },
   { id: 'users', label: 'Users', icon: Users },
   { id: 'orgs', label: 'Organizations', icon: Building2 },
   { id: 'announcements', label: 'Announcements', icon: Megaphone },
@@ -25,7 +27,7 @@ const TABS: Array<{ id: string; label: string; icon: typeof Users }> = [
 function Dashboard() {
   const [tab, setTab] = useState('overview');
   const body: Record<string, ReactNode> = {
-    overview: <Overview goto={setTab} />, users: <UsersTab />, orgs: <OrgsTab />, announcements: <AnnouncementsTab />,
+    overview: <Overview goto={setTab} />, approvals: <ApprovalsTab />, users: <UsersTab />, orgs: <OrgsTab />, announcements: <AnnouncementsTab />,
     moderation: <ModerationTab />, subjects: <SubjectsTab />, logs: <LogsTab />, settings: <SettingsTab />,
   };
   return (

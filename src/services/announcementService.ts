@@ -57,3 +57,15 @@ export async function deleteAnnouncement(uid: string, a: Announcement) {
   await patch({ [`announcements/${a.id}`]: null });
   await logActivity(uid, 'announcement.delete', a.title);
 }
+
+// ───── administrator moderation ─────
+/** Flags an announcement for follow-up (stays visible). Admin only; the database rules reject anyone else. */
+export async function flagAnnouncement(admin: string, a: Announcement, flagged: boolean, reason = '') {
+  await patch({ [`announcements/${a.id}/flagged`]: flagged ? true : null, [`announcements/${a.id}/flagReason`]: flagged && reason ? reason.slice(0, 200) : null });
+  await logActivity(admin, flagged ? 'announcement.flag' : 'announcement.unflag', a.title);
+}
+/** Hides an announcement from every feed without deleting it. Only an administrator can hide or un-hide. */
+export async function hideAnnouncement(admin: string, a: Announcement, hide: boolean) {
+  await patch({ [`announcements/${a.id}/status`]: hide ? 'hidden' : 'published', [`announcements/${a.id}/updatedAt`]: stamp() });
+  await logActivity(admin, hide ? 'announcement.hide' : 'announcement.unhide', a.title);
+}

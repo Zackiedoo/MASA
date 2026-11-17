@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { KeyRound, Plus, Search, ShieldOff, ShieldCheck, UserCog, Users } from 'lucide-react';
+import { KeyRound, Pencil, Plus, Search, ShieldOff, ShieldCheck, Trash2, UserCog, Users } from 'lucide-react';
 import { useValue } from '../../hooks/useValue';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -28,6 +28,7 @@ export function UsersTab() {
   const [q, setQ] = useState('');
   const [creating, setCreating] = useState(false);
   const [roleFor, setRoleFor] = useState<UserProfile | null>(null);
+  const [editFor, setEditFor] = useState<UserProfile | null>(null);
   const [creds, setCreds] = useState<Credential[] | null>(null);
   const orgList = useMemo(() => toList<Organization>(orgs.data), [orgs.data]);
 
@@ -42,6 +43,11 @@ export function UsersTab() {
   async function reset(u: UserProfile) {
     if (!uid || !confirm(`Reset the password for ${u.fullName}? They will be signed out everywhere.`)) return;
     try { const r = await manageUser({ action: 'resetPassword', uid: u.uid }, uid); setCreds([{ id: u.studentId, name: u.fullName, password: r.tempPassword ?? '' }]); } catch (e) { toast(explainError(e), 'error'); }
+  }
+  async function remove(u: UserProfile) {
+    if (!uid) return;
+    if (!confirm(`Permanently delete ${u.fullName} (${u.studentId})? Their login, profile and course memberships are removed. This cannot be undone.`)) return;
+    try { await manageUser({ action: 'delete', uid: u.uid }, uid); toast('Account deleted.'); } catch (e) { toast(explainError(e), 'error'); }
   }
   async function toggle(u: UserProfile) {
     if (!uid) return;
@@ -74,17 +80,20 @@ export function UsersTab() {
             <li key={u.uid} className="glass card flex flex-wrap items-center gap-3 p-4">
               <div className="min-w-0 flex-1"><p className="truncate font-bold">{u.fullName}</p><p className="truncate text-xs text-muted">ID {u.studentId}{u.orgId ? ` · ${orgs.data?.[u.orgId]?.name ?? 'org'}` : ''}</p></div>
               <Badge tone="maroon"><span className="capitalize">{u.role}</span></Badge>
-              <Badge tone={u.isActive ? 'ok' : 'bad'}>{u.isActive ? 'Active' : 'Disabled'}</Badge>
+              {u.approvalStatus === 'pending' ? <Badge tone="warn">Awaiting approval</Badge> : u.approvalStatus === 'rejected' ? <Badge tone="bad">Rejected</Badge> : <Badge tone={u.isActive ? 'ok' : 'bad'}>{u.isActive ? 'Active' : 'Disabled'}</Badge>}
               <div className="flex gap-1">
+                <button className="btn btn-ghost btn-sm" title="Edit name / ID" aria-label="Edit user" onClick={() => setEditFor(u)}><Pencil className="h-3.5 w-3.5" /></button>
                 <button className="btn btn-ghost btn-sm" title="Reset password" aria-label="Reset password" onClick={() => reset(u)}><KeyRound className="h-3.5 w-3.5" /></button>
-                <button className="btn btn-ghost btn-sm" title="Change role" aria-label="Change role" disabled={u.uid === uid} onClick={() => setRoleFor(u)}><UserCog className="h-3.5 w-3.5" /></button>
-                <button className="btn btn-ghost btn-sm" title={u.isActive ? 'Disable' : 'Reactivate'} aria-label={u.isActive ? 'Disable account' : 'Reactivate account'} disabled={u.uid === uid} onClick={() => toggle(u)}>{u.isActive ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}</button>
+                <button className="btn btn-ghost btn-sm" title="Change role" aria-label="Change role" disabled={u.uid === uid || !!u.approvalStatus && u.approvalStatus !== 'approved'} onClick={() => setRoleFor(u)}><UserCog className="h-3.5 w-3.5" /></button>
+                <button className="btn btn-ghost btn-sm" title={u.isActive ? 'Disable' : 'Reactivate'} aria-label={u.isActive ? 'Disable account' : 'Reactivate account'} disabled={u.uid === uid || !!u.approvalStatus && u.approvalStatus !== 'approved'} onClick={() => toggle(u)}>{u.isActive ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}</button>
+                <button className="btn btn-ghost btn-sm text-bad" title="Delete account" aria-label="Delete account" disabled={u.uid === uid} onClick={() => remove(u)}><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
             </li>
           ))}
         </ul>
       )}
       {creating && <CreateModal orgs={orgList} existing={byLoginId} onClose={() => setCreating(false)} onCreds={setCreds} />}
+      {editFor && <EditModal key={editFor.uid} user={editFor} onClose={() => setEditFor(null)} />}
       {roleFor && <RoleModal user={roleFor} orgs={orgList} onClose={() => setRoleFor(null)} />}
       <CredentialsModal items={creds} onClose={() => setCreds(null)} />
     </div>
@@ -171,6 +180,33 @@ function RoleModal({ user, orgs, onClose }: { user: UserProfile; orgs: Organizat
         {role === 'organization' && <Field label="Organization">{(f) => <select id={f} className="field" value={orgId} onChange={(e) => setOrgId(e.target.value)}>{orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}</select>}</Field>}
         <div className="flex justify-end gap-2"><button className="btn btn-ghost" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={busy || role === user.role && role !== 'organization'} onClick={save}>{busy ? 'Saving…' : 'Save role'}</button></div>
       </div>
+    </Modal>
+  );
+}
+
+function EditModal({ user, onClose }: { user: UserProfile; onClose: () => void }) {
+  const { uid } = useAuth();
+  const toast = useToast();
+  const [name, setName] = useState(user.fullName);
+  const [loginId, setLoginId] = useState(user.studentId);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  async function save(e: FormEvent) {
+    e.preventDefault(); if (!uid) return; setErr(null);
+    if (!isLoginId(loginId.trim())) return setErr('ID must be 3–20 letters, numbers or dashes.');
+    if (cleanText(name).length < 2) return setErr('Full name is required.');
+    setBusy(true);
+    try { await manageUser({ action: 'update', uid: user.uid, fullName: cleanText(name), studentId: loginId.trim() }, uid); toast('Account updated.'); onClose(); }
+    catch (x) { setErr(x instanceof Error ? x.message : explainError(x)); } finally { setBusy(false); }
+  }
+  return (
+    <Modal open onClose={onClose} title={`Edit — ${user.fullName}`}>
+      <form onSubmit={save} className="space-y-4">
+        {err && <ErrorBox message={err} />}
+        <Field label="Full name">{(f) => <input id={f} className="field" value={name} onChange={(e) => setName(e.target.value)} required />}</Field>
+        <Field label="Login ID" hint="Changing the ID changes what this person types to log in.">{(f) => <input id={f} className="field" value={loginId} onChange={(e) => setLoginId(e.target.value)} autoCapitalize="none" required />}</Field>
+        <div className="flex justify-end gap-2"><button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button></div>
+      </form>
     </Modal>
   );
 }

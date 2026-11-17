@@ -12,7 +12,18 @@ function init() {
   if (!raw) throw new HttpError(503, 'Server is not configured: FIREBASE_SERVICE_ACCOUNT_JSON is missing.');
   const databaseURL = process.env.FIREBASE_DATABASE_URL || process.env.VITE_FIREBASE_DATABASE_URL;
   if (!databaseURL) throw new HttpError(503, 'Server is not configured: FIREBASE_DATABASE_URL is missing.');
-  return initializeApp({ credential: cert(JSON.parse(raw)), databaseURL });
+  let account: Record<string, unknown>;
+  try {
+    account = JSON.parse(raw);
+  } catch {
+    throw new HttpError(503, 'Server misconfigured: FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON. Re-paste the whole key file (from { to }).');
+  }
+  try {
+    return initializeApp({ credential: cert(account as never), databaseURL });
+  } catch (e) {
+    console.error('Firebase Admin init failed', e);
+    throw new HttpError(503, 'Server misconfigured: the service-account key was rejected (check FIREBASE_SERVICE_ACCOUNT_JSON).');
+  }
 }
 
 export const adminAuth = () => getAuth(init());
@@ -56,11 +67,13 @@ export async function getCaller(req: VercelRequest): Promise<Caller> {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   if (!token) throw new HttpError(401, 'Sign in required.');
+  const auth = adminAuth(); // configuration problems surface here with a clear message (not as "expired session")
   let uid: string;
   try {
-    uid = (await adminAuth().verifyIdToken(token, true)).uid; // `true` also rejects revoked tokens
-  } catch {
-    throw new HttpError(401, 'Invalid or expired session.');
+    uid = (await auth.verifyIdToken(token, true)).uid; // `true` also rejects revoked tokens
+  } catch (e) {
+    console.error('verifyIdToken failed', e);
+    throw new HttpError(401, 'Invalid or expired session. Log out, log in again, and retry.');
   }
   const snap = await adminDb().ref(`users/${uid}`).get();
   const u = snap.val();

@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Check, Eye, Flag, Inbox, Trash2, X } from 'lucide-react';
+import { Check, Eye, EyeOff, Flag, Inbox, Trash2, X } from 'lucide-react';
 import { useValue } from '../../hooks/useValue';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { approveQueued, dismissReport, rejectQueued, removePost, revealIdentity } from '../../services/freedomWallService';
+import { approveQueued, dismissReport, flagPost, hidePost, rejectQueued, removePost, revealIdentity, unhidePost } from '../../services/freedomWallService';
 import { explainError } from '../../lib/database';
 import { formatDateTime, toList } from '../../utils/format';
 import { Segmented } from '../shared/Field';
@@ -11,7 +11,7 @@ import { Modal } from '../shared/Modal';
 import { Badge, Empty, ErrorBox, Spinner } from '../shared/States';
 import type { Report, WallIdentity, WallPost } from '../../types';
 
-type View = 'reports' | 'queue' | 'active';
+type View = 'reports' | 'queue' | 'active' | 'hidden';
 
 export function ModerationTab() {
   const { uid } = useAuth();
@@ -24,6 +24,7 @@ export function ModerationTab() {
 
   const postList = useMemo(() => toList<WallPost>(posts.data).sort((a, b) => b.createdAt - a.createdAt), [posts.data]);
   const queued = useMemo(() => toList<WallPost>(queue.data).filter((p) => p.status === 'pending').sort((a, b) => a.createdAt - b.createdAt), [queue.data]);
+  const hiddenList = useMemo(() => toList<WallPost>(queue.data).filter((p) => p.status === 'hidden').sort((a, b) => b.createdAt - a.createdAt), [queue.data]);
   const openReports = useMemo(() => toList<Report>(reports.data).filter((r) => r.status === 'open'), [reports.data]);
   const grouped = useMemo(() => {
     const m = new Map<string, Report[]>();
@@ -37,7 +38,7 @@ export function ModerationTab() {
 
   return (
     <div className="space-y-4">
-      <Segmented label="Moderation views" value={view} onChange={setView} options={[{ value: 'reports', label: `Reported (${grouped.length})` }, { value: 'queue', label: `Pending approval (${queued.length})` }, { value: 'active', label: `Active posts (${postList.length})` }]} />
+      <Segmented label="Moderation views" value={view} onChange={setView} options={[{ value: 'reports', label: `Reported (${grouped.length})` }, { value: 'queue', label: `Pending approval (${queued.length})` }, { value: 'active', label: `Active posts (${postList.length})` }, { value: 'hidden', label: `Hidden (${hiddenList.length})` }]} />
       {(posts.error || reports.error || queue.error) && <ErrorBox message={(posts.error || reports.error || queue.error) as string} />}
 
       {view === 'reports' && (grouped.length === 0 ? <Empty icon={<Flag className="h-8 w-8" />} title="No open reports" /> : (
@@ -71,8 +72,21 @@ export function ModerationTab() {
         <ul className="space-y-2">{postList.map((p) => (
           <li key={p.id} className="glass card flex flex-wrap items-center gap-3 p-4">
             <div className="min-w-0 flex-1"><p className="truncate text-sm"><b>{p.authorLabel}:</b> {p.content}</p><p className="text-xs text-muted">Expires {formatDateTime(p.expiresAt)}</p></div>
+            {p.flagged && <Badge tone="warn"><Flag className="h-3 w-3" />Flagged</Badge>}
             <button className="btn btn-ghost btn-sm" aria-label="View identity" onClick={() => reveal(p.id)}><Eye className="h-3.5 w-3.5" /></button>
+            <button className="btn btn-ghost btn-sm" aria-label={p.flagged ? 'Unflag post' : 'Flag post'} onClick={() => run(() => flagPost(uid, p, !p.flagged), p.flagged ? 'Flag removed.' : 'Flagged.')}><Flag className={`h-3.5 w-3.5 ${p.flagged ? 'fill-current' : ''}`} /></button>
+            <button className="btn btn-ghost btn-sm" aria-label="Hide post" onClick={() => run(() => hidePost(uid, p), 'Post hidden.')}><EyeOff className="h-3.5 w-3.5" /></button>
             <button className="btn btn-danger btn-sm" aria-label="Remove post" onClick={() => { if (confirm('Remove this post?')) void run(() => removePost(uid, p, []), 'Removed.'); }}><Trash2 className="h-3.5 w-3.5" /></button>
+          </li>))}</ul>
+      ))}
+
+      {view === 'hidden' && (queue.loading ? <Spinner /> : hiddenList.length === 0 ? <Empty icon={<EyeOff className="h-8 w-8" />} title="No hidden posts" hint="Posts you hide stay here, out of sight, until you restore or remove them." /> : (
+        <ul className="space-y-2">{hiddenList.map((p) => (
+          <li key={p.id} className="glass card flex flex-wrap items-center gap-3 p-4">
+            <div className="min-w-0 flex-1"><p className="truncate text-sm"><b>{p.authorLabel}:</b> {p.content}</p><p className="text-xs text-muted">Would expire {formatDateTime(p.expiresAt)}</p></div>
+            <button className="btn btn-ghost btn-sm" aria-label="View identity" onClick={() => reveal(p.id)}><Eye className="h-3.5 w-3.5" /></button>
+            <button className="btn btn-ghost btn-sm" onClick={() => run(() => unhidePost(uid, p), 'Post restored to the wall.')}>Restore</button>
+            <button className="btn btn-danger btn-sm" aria-label="Remove post" onClick={() => { if (confirm('Remove this post permanently?')) void run(() => removePost(uid, p, []), 'Removed.'); }}><Trash2 className="h-3.5 w-3.5" /></button>
           </li>))}</ul>
       ))}
 

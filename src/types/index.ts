@@ -13,7 +13,12 @@ export interface UserProfile {
   isActive: boolean;
   mustChangePassword?: boolean;
   orgId?: string;
+  /** Professors/organizations register as 'pending' until an administrator approves them. Missing = approved (older accounts). */
+  approvalStatus?: ApprovalStatus;
+  rejectionReason?: string;
+  registration?: { contactEmail?: string; note?: string; orgName?: string; orgDescription?: string };
 }
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 export interface Organization {
   id: string;
@@ -37,7 +42,10 @@ export interface Announcement {
   link?: string;
   createdAt: number;
   updatedAt?: number;
-  status: 'published' | 'archived';
+  status: 'published' | 'archived' | 'hidden';
+  /** Administrator moderation flags (only admins can set these). */
+  flagged?: boolean;
+  flagReason?: string;
   authorUid: string;
   memoId?: string;
 }
@@ -101,8 +109,12 @@ export interface WallPost {
   content: string;
   createdAt: number;
   expiresAt: number;
-  status: 'approved' | 'pending' | 'rejected';
+  status: 'approved' | 'pending' | 'rejected' | 'hidden';
+  flagged?: boolean;
+  editedAt?: number;
 }
+/** A student on a course roster (subjectMembers/{subjectId}/{uid}). */
+export interface RosterEntry { uid: string; studentId: string; fullName: string; enrolledAt?: number; by?: string }
 export interface Report { id: string; postId: string; reporterId: string; reason: string; createdAt: number; status: 'open' | 'dismissed' | 'actioned' }
 export interface WallIdentity { uid: string; studentId: string; fullName: string }
 

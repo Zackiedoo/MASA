@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ROLE_LABEL } from '../lib/permissions';
 import { Link } from 'react-router-dom';
 import { ChevronRight, LogOut, Moon, Palette, Sun } from 'lucide-react';
 import { PageHeader } from '../components/navigation/PageHeader';
@@ -58,7 +59,7 @@ export default function Settings() {
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                 <dt className="text-muted">Name</dt><dd className="font-semibold">{profile.fullName}</dd>
                 <dt className="text-muted">ID</dt><dd className="font-semibold">{profile.studentId}</dd>
-                <dt className="text-muted">Role</dt><dd className="font-semibold capitalize">{profile.role}</dd>
+                <dt className="text-muted">Role</dt><dd className="font-semibold">{ROLE_LABEL[profile.role]}</dd>
                 <dt className="text-muted">Member since</dt><dd className="font-semibold">{formatDateTime(profile.createdAt)}</dd>
               </dl>
               <div className="flex flex-wrap gap-2"><button className="btn btn-ghost" onClick={() => setPw(true)}>Change password</button><button className="btn btn-ghost" onClick={() => void signOut()}><LogOut className="h-4 w-4" />Log out</button></div>

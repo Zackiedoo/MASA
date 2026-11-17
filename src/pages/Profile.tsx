@@ -7,6 +7,7 @@ import { ProfileAvatar } from '../components/shared/Avatar';
 import { EditProfileModal } from '../components/profile/EditProfileModal';
 import { useAuth } from '../contexts/AuthContext';
 import { Badge } from '../components/shared/States';
+import { ROLE_LABEL } from '../lib/permissions';
 
 function ProfileView() {
   const { profile, role } = useAuth();
@@ -25,7 +26,7 @@ function ProfileView() {
           <h1 className="text-xl font-extrabold">{profile.fullName}</h1>
           <p className="text-sm text-muted">@{profile.nickname}</p>
         </div>
-        <Badge tone="gold"><span className="capitalize">{profile.role}</span></Badge>
+        <Badge tone="gold">{ROLE_LABEL[profile.role]}</Badge>
         {/* Student ID is shown only to its owner (the data is not readable by other students). */}
         <p className="flex items-center gap-1.5 rounded-full bg-primary/8 px-3 py-1 text-xs font-semibold"><IdCard className="h-3.5 w-3.5" />ID {profile.studentId} <span className="font-normal text-muted">· only you can see this</span></p>
         <p className="max-w-md whitespace-pre-wrap text-sm leading-relaxed">{profile.bio || <span className="text-muted">No bio yet — tap the pencil to add one.</span>}</p>

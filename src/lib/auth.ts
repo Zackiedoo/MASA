@@ -30,10 +30,10 @@ export async function signIn(loginId: string, password: string): Promise<void> {
   const id = loginId.trim();
   if (!id || !password) throw new Error('Enter your ID and password.');
   if (isDemoMode || !firebaseAuth) {
-    const users = (demoGet('users') || {}) as Record<string, { studentId: string; isActive: boolean }>;
+    const users = (demoGet('users') || {}) as Record<string, { studentId: string; isActive: boolean; approvalStatus?: string }>;
     const hit = Object.entries(users).find(([, u]) => u.studentId.toLowerCase() === id.toLowerCase());
     if (!hit || password !== DEMO_PASSWORD) throw new Error('Incorrect ID or password.');
-    if (!hit[1].isActive) throw new Error('This account has been disabled. Contact an administrator.');
+    if (!hit[1].isActive && (hit[1].approvalStatus ?? 'approved') === 'approved') throw new Error('This account has been disabled. Contact an administrator.');
     localStorage.setItem(DEMO_SESSION, hit[0]);
     demoListeners.forEach((l) => l({ uid: hit[0] }));
     return;

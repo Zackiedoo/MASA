@@ -16,6 +16,7 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Legal from './pages/Legal';
 import NotFound from './pages/NotFound';
+import Register from './pages/Register';
 
 // Heavier, role-specific areas are code-split.
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -46,6 +47,7 @@ export default function App() {
                   <Route path="messages/:subjectId" element={<SubjectGroup />} />
                   <Route path="profile" element={<Profile />} />
                   <Route path="login" element={<LoginRoute />} />
+                  <Route path="register" element={<Register />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="legal/:doc" element={<Legal />} />
                   <Route path="publish" element={<Publish />} />

@@ -14,7 +14,7 @@ const isOrgUser = `(${active} && ${role} === 'organization')`;
 const isStudent = `(${active} && ${role} === 'student')`;
 const profOf = (sid) =>
   `(${isProf} && root.child('subjects/'+${sid}+'/professorId').val() === auth.uid)`;
-const memberOf = (sid) => `(${active} && root.child('subjectMembers/'+${sid}+'/'+auth.uid).val() === true)`;
+const memberOf = (sid) => `(${active} && root.child('subjectMembers/'+${sid}+'/'+auth.uid).exists())`;
 const staffOrMember = (sid) => `(${isAdmin} || ${profOf(sid)} || ${memberOf(sid)})`;
 const adminOrProf = (sid) => `(${isAdmin} || ${profOf(sid)})`;
 const url = `newData.isString() && newData.val().length <= 1000 && newData.val().matches(/^https?:.+/)`;
@@ -33,9 +33,11 @@ const rules = {
     // denormalised into the records that need them (messages, subjects, announcements).
     users: {
       '.read': isAdmin,
-      '.indexOn': ['studentId', 'role'],
+      '.indexOn': ['studentId', 'role', 'approvalStatus'],
       $uid: {
-        '.read': `${active} && auth.uid === $uid`,
+        // Signed-in users can always read their OWN profile — including while pending approval or rejected,
+        // so the app can show them the right screen. Everything else in the database still requires isActive.
+        '.read': `auth != null && auth.uid === $uid`,
         '.write': isAdmin,
         // Fields a user may change on THEIR OWN profile. role / isActive / studentId are NOT here.
         nickname: { '.write': `${active} && auth.uid === $uid`, '.validate': str(30, 2) },
@@ -51,6 +53,8 @@ const rules = {
         },
         role: { '.validate': `newData.val() === 'student' || newData.val() === 'organization' || newData.val() === 'professor' || newData.val() === 'admin'` },
         isActive: { '.validate': 'newData.isBoolean()' },
+        approvalStatus: { '.validate': `newData.val() === 'pending' || newData.val() === 'approved' || newData.val() === 'rejected'` },
+        rejectionReason: { '.validate': str(300) },
         studentId: { '.validate': str(20, 3) },
         fullName: { '.validate': str(120, 1) },
         $other: { '.validate': true },
@@ -90,13 +94,17 @@ const rules = {
         link: { '.validate': url },
         createdAt: { '.validate': `newData.isNumber() && (newData.val() === now || (data.exists() && data.val() === newData.val()))` },
         updatedAt: { '.validate': 'newData.isNumber()' },
-        status: { '.validate': `newData.val() === 'published' || newData.val() === 'archived'` },
+        // 'hidden' is a moderation state only administrators can set or lift ('archived' is the author's own choice).
+        status: { '.validate': `((newData.val() === 'published' || newData.val() === 'archived') && (data.val() !== 'hidden' || ${isAdmin})) || (newData.val() === 'hidden' && ${isAdmin})` },
+        flagged: { '.validate': `newData.isBoolean() && (${isAdmin} || (data.exists() && data.val() === newData.val()))` },
+        flagReason: { '.validate': `${str(200)} && (${isAdmin} || (data.exists() && data.val() === newData.val()))` },
         authorUid: { '.validate': str(128, 1) },
         memoId: { '.validate': str(80) },
         attachments: {
-          '.validate': 'newData.hasChildren() && newData.numChildren() <= 10',
+          // Rules have no "count children" — instead only the keys 0–9 are allowed below, i.e. at most 10 attachments.
+          '.validate': 'newData.hasChildren()',
           $i: {
-            '.validate': `newData.hasChildren(['name','url','type'])`,
+            '.validate': `$i.matches(/^[0-9]$/) && newData.hasChildren(['name','url','type'])`,
             name: { '.validate': str(200, 1) },
             url: { '.validate': url },
             type: { '.validate': `newData.val() === 'image' || newData.val() === 'file'` },
@@ -114,8 +122,10 @@ const rules = {
     // ───────────── Subjects ─────────────
     subjects: {
       '.read': 'auth != null',
+      '.indexOn': ['professorId'],
       $sid: {
-        '.write': `${isAdmin} || (${isProf} && newData.exists() && newData.child('professorId').val() === auth.uid && (!data.exists() || data.child('professorId').val() === auth.uid))`,
+        // Courses are created, edited, deleted and assigned to professors by administrators only.
+        '.write': isAdmin,
         '.validate': `newData.hasChildren(['subjectCode','subjectName','professorId','professorName'])`,
         subjectCode: { '.validate': str(30, 2) },
         subjectName: { '.validate': str(120, 2) },
@@ -136,12 +146,33 @@ const rules = {
       },
     },
 
+    // Student ID → account lookup so a professor can enroll an EXISTING student. Written by the server only.
+    // Readable one entry at a time (no listing), and only by professors and administrators.
+    studentIndex: {
+      $studentId: {
+        '.read': `${isProf} || ${isAdmin}`,
+        '.write': isAdmin,
+        '.validate': `newData.hasChildren(['uid','fullName'])`,
+        uid: { '.validate': str(128, 1) },
+        fullName: { '.validate': str(120, 1) },
+        $other: { '.validate': false },
+      },
+    },
+
     // Approved members (used by every "members only" rule below).
     subjectMembers: {
       $sid: {
         '.read': adminOrProf('$sid'),
         '.write': adminOrProf('$sid'),
-        $uid: { '.read': `${active} && auth.uid === $uid`, '.validate': 'newData.isBoolean()' },
+        $uid: {
+          '.read': `${active} && auth.uid === $uid`,
+          '.validate': `newData.hasChildren(['studentId','fullName'])`,
+          studentId: { '.validate': str(20, 3) },
+          fullName: { '.validate': str(120, 1) },
+          enrolledAt: { '.validate': 'newData.isNumber()' },
+          by: { '.validate': str(128) },
+          $other: { '.validate': false },
+        },
       },
     },
 
@@ -232,15 +263,16 @@ const rules = {
       $sid: {
         '.read': staffOrMember('$sid'),
         $slot: {
-          '.write': adminOrProf('$sid'),
+          '.write': isAdmin,
           '.validate': `newData.hasChildren(['day','startTime','endTime','status'])`,
           day: { '.validate': `newData.isString() && newData.val().matches(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/)` },
           startTime: { '.validate': `newData.isString() && newData.val().matches(/^[0-2][0-9]:[0-5][0-9]$/)` },
           endTime: { '.validate': `newData.isString() && newData.val().matches(/^[0-2][0-9]:[0-5][0-9]$/)` },
           room: { '.validate': str(40) },
-          status: { '.validate': `newData.val() === 'green' || newData.val() === 'yellow' || newData.val() === 'red'` },
-          updatedBy: { '.validate': str(128) },
-          updatedAt: { '.validate': 'newData.isNumber()' },
+          // A professor may ONLY change the status of their own subject's classes (and the audit fields that go with it).
+          status: { '.write': adminOrProf('$sid'), '.validate': `newData.val() === 'green' || newData.val() === 'yellow' || newData.val() === 'red'` },
+          updatedBy: { '.write': adminOrProf('$sid'), '.validate': str(128) },
+          updatedAt: { '.write': adminOrProf('$sid'), '.validate': 'newData.isNumber()' },
           $other: { '.validate': false },
         },
       },
@@ -266,7 +298,17 @@ const rules = {
         '.validate': `newData.hasChildren(['authorLabel','anonymous','content','createdAt','expiresAt','status'])`,
         authorLabel: { '.validate': `${str(60, 1)} && (${isAdmin} || (newData.parent().child('anonymous').val() === true && newData.val() === 'Anonymous') || (newData.parent().child('anonymous').val() === false && newData.val() === root.child('users/'+auth.uid+'/nickname').val()))` },
         anonymous: { '.validate': 'newData.isBoolean()' },
-        content: { '.validate': str(500, 1) },
+        // A student may edit the text of THEIR OWN post in place (only when moderation-first mode is off; in that
+        // mode the app re-submits the edit for approval instead). editedAt must be written in the same update.
+        content: {
+          '.write': `${isStudent} && data.exists() && newData.exists() && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid && root.child('settings/freedomWall/requireApproval').val() !== true && newData.parent().child('editedAt').val() === now`,
+          '.validate': str(500, 1),
+        },
+        editedAt: {
+          '.write': `${isStudent} && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid`,
+          '.validate': 'newData.val() === now',
+        },
+        flagged: { '.validate': `newData.isBoolean() && ${isAdmin}` },
         createdAt: { '.validate': `newData.isNumber() && (newData.val() === now || data.exists() || ${isAdmin})` },
         expiresAt: {
           '.validate': `newData.isNumber() && (${isAdmin} || data.exists() || ${DURATIONS})`,
@@ -285,11 +327,11 @@ const rules = {
         authorLabel: { '.validate': `${str(60, 1)} && (${isAdmin} || (newData.parent().child('anonymous').val() === true && newData.val() === 'Anonymous') || (newData.parent().child('anonymous').val() === false && newData.val() === root.child('users/'+auth.uid+'/nickname').val()))` },
         anonymous: { '.validate': 'newData.isBoolean()' },
         content: { '.validate': str(500, 1) },
-        createdAt: { '.validate': `newData.isNumber() && (newData.val() === now || data.exists())` },
+        createdAt: { '.validate': `newData.isNumber() && (newData.val() === now || data.exists() || ${isAdmin})` },
         expiresAt: {
-          '.validate': `newData.isNumber() && (data.exists() || ${DURATIONS})`,
+          '.validate': `newData.isNumber() && (${isAdmin} || data.exists() || ${DURATIONS})`,
         },
-        status: { '.validate': `newData.val() === 'pending' || newData.val() === 'rejected'` },
+        status: { '.validate': `newData.val() === 'pending' || newData.val() === 'rejected' || newData.val() === 'hidden'` },
         decidedBy: { '.validate': str(128) },
         decidedAt: { '.validate': 'newData.isNumber()' },
         $other: { '.validate': false },
@@ -313,6 +355,13 @@ const rules = {
         version: { '.validate': str(20, 1) },
         acceptedAt: { '.validate': 'newData.val() === now' },
         $other: { '.validate': false },
+      },
+    },
+    // Which Freedom Wall posts are mine (so I can edit/delete them on any device). Private to the owner.
+    userPosts: {
+      $uid: {
+        '.read': `${active} && (auth.uid === $uid || ${isAdmin})`,
+        $pid: { '.write': `${active} && ((auth.uid === $uid && (${isStudent} || !newData.exists())) || ${isAdmin})`, '.validate': 'newData.isBoolean()' },
       },
     },
     // One report per (post, reporter): the key is `${postId}_${reporterUid}`, so duplicates simply overwrite-fail.

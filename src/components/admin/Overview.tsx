@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { BookOpen, Building2, Flag, GraduationCap, Inbox, Megaphone, Presentation } from 'lucide-react';
+import { BookOpen, Building2, Flag, GraduationCap, Inbox, Megaphone, Presentation, UserCheck } from 'lucide-react';
 import { useValue } from '../../hooks/useValue';
 import type { Announcement, JoinRequest, Report, ResetRequest, UserProfile } from '../../types';
 import { toList } from '../../utils/format';
@@ -27,10 +27,11 @@ export function Overview({ goto }: { goto: (tab: string) => void }) {
     const pendingJoin = Object.values(joins.data ?? {}).flatMap((m) => Object.values(m)).filter((r) => r.status === 'pending').length;
     return {
       students: u.filter((x) => x.role === 'student').length,
-      professors: u.filter((x) => x.role === 'professor').length,
+      professors: u.filter((x) => x.role === 'professor' && (x.approvalStatus ?? 'approved') === 'approved').length,
       orgs: Object.keys(orgs.data ?? {}).length,
       announcements: Object.values(ann.data ?? {}).filter((a) => a.status === 'published').length,
       moderation: openReportPosts + Object.values(queue.data ?? {}).filter((p) => p.status === 'pending').length,
+      registrations: u.filter((x) => x.approvalStatus === 'pending').length,
       access: toList<ResetRequest>(resets.data).filter((r) => r.status === 'open').length + pendingJoin,
     };
   }, [users.data, orgs.data, ann.data, reports.data, resets.data, joins.data, queue.data]);
@@ -41,9 +42,10 @@ export function Overview({ goto }: { goto: (tab: string) => void }) {
       <Tile icon={<Building2 className="h-6 w-6" />} label="Organizations" value={s.orgs} onClick={() => goto('orgs')} />
       <Tile icon={<Presentation className="h-6 w-6" />} label="Professors" value={s.professors} onClick={() => goto('users')} />
       <Tile icon={<Megaphone className="h-6 w-6" />} label="Published announcements" value={s.announcements} onClick={() => goto('announcements')} />
+      <Tile icon={<UserCheck className="h-6 w-6" />} label="Registrations awaiting approval" value={s.registrations} hot={s.registrations > 0} onClick={() => goto('approvals')} />
       <Tile icon={<Flag className="h-6 w-6" />} label="Pending moderation items" value={s.moderation} hot={s.moderation > 0} onClick={() => goto('moderation')} />
-      <Tile icon={<Inbox className="h-6 w-6" />} label="Pending account / access requests" value={s.access} hot={s.access > 0} onClick={() => goto('users')} />
-      <p className="col-span-full flex items-center gap-2 px-1 text-xs text-muted"><BookOpen className="h-3.5 w-3.5" />“Access requests” = password-reset requests + subject join requests awaiting a decision.</p>
+      <Tile icon={<Inbox className="h-6 w-6" />} label="Password-reset & join requests" value={s.access} hot={s.access > 0} onClick={() => goto('users')} />
+      <p className="col-span-full flex items-center gap-2 px-1 text-xs text-muted"><BookOpen className="h-3.5 w-3.5" />Password-reset requests and subject join requests awaiting a decision.</p>
     </div>
   );
 }
