@@ -46,11 +46,16 @@ export async function editOwnPost(id: string, content: string) {
 
 export async function reportPost(uid: string, postId: string, reason: string) {
   const rid = `${postId}_${uid}`;
-  if (await read(`reports/${rid}`)) throw new Error('You already reported this post.');
-  await patch({
-    [`reports/${rid}`]: { postId, reporterId: uid, reason, createdAt: stamp(), status: 'open' },
-    [`rateLimits/${uid}/report`]: stamp(),
-  });
+  // Students cannot READ /reports (only admins can), so we don't pre-check for a duplicate; the rules refuse a second report from the same person.
+  try {
+    await patch({
+      [`reports/${rid}`]: { postId, reporterId: uid, reason: reason.slice(0, 300), createdAt: stamp(), status: 'open' },
+      [`rateLimits/${uid}/report`]: stamp(),
+    });
+  } catch (e) {
+    if (/permission[_-]denied/i.test(String((e as { code?: string })?.code) + String((e as Error)?.message))) throw new Error('This report could not be sent. You may have already reported this post, or you reported another one a few seconds ago. Please wait a moment and try again.');
+    throw e;
+  }
 }
 
 // ───── moderation (administrators) ─────
