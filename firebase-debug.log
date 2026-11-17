@@ -1,0 +1,31 @@
+[debug] [2026-11-17T07:18:13.282Z] ----------------------------------------------------------------------
+[debug] [2026-11-17T07:18:13.285Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\Zack\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only database
+[debug] [2026-11-17T07:18:13.286Z] CLI Version:   15.36.0
+[debug] [2026-11-17T07:18:13.286Z] Platform:      win32
+[debug] [2026-11-17T07:18:13.286Z] Node Version:  v24.18.0
+[debug] [2026-11-17T07:18:13.286Z] Detected Agent: unknown
+[debug] [2026-11-17T07:18:13.287Z] Time:          Tue Nov 17 2026 15:18:13 GMT+0800 (Philippine Standard Time)
+[debug] [2026-11-17T07:18:13.287Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-11-17T07:18:13.308Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-11-17T07:18:31.465Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-11-17T07:18:31.465Z] > authorizing via signed-in user (elcanozack@gmail.com)
+[debug] [2026-11-17T07:18:31.466Z] [iam] checking project mamasamasa for permissions ["firebase.projects.get","firebasedatabase.instances.update"]
+[debug] [2026-11-17T07:18:31.469Z] Checked if tokens are valid: false, expires at: 1794491150748
+[debug] [2026-11-17T07:18:31.470Z] Checked if tokens are valid: false, expires at: 1794491150748
+[debug] [2026-11-17T07:18:31.470Z] > refreshing access token with scopes: []
+[debug] [2026-11-17T07:18:31.474Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-11-17T07:18:31.475Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-11-17T07:18:32.183Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-11-17T07:18:32.184Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-11-17T07:18:33.067Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-11-17T07:18:33.067Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-11-17T07:18:33.089Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/mamasamasa:testIamPermissions [none]
+[debug] [2026-11-17T07:18:33.090Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/mamasamasa:testIamPermissions  x-goog-user-project=mamasamasa
+[debug] [2026-11-17T07:18:33.090Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/mamasamasa:testIamPermissions {"permissions":["firebase.projects.get","firebasedatabase.instances.update"]}
+[debug] [2026-11-17T07:18:38.200Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/mamasamasa:testIamPermissions 200
+[debug] [2026-11-17T07:18:38.200Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/mamasamasa:testIamPermissions {"permissions":["firebase.projects.get","firebasedatabase.instances.update"]}
+[debug] [2026-11-17T07:18:38.201Z] Checked if tokens are valid: true, expires at: 1794903512067
+[debug] [2026-11-17T07:18:38.201Z] Checked if tokens are valid: true, expires at: 1794903512067
+[debug] [2026-11-17T07:18:38.202Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/mamasamasa [none]
+[debug] [2026-11-17T07:18:39.289Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/mamasamasa 200
