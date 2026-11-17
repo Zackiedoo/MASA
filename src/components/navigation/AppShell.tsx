@@ -65,7 +65,7 @@ export function AppShell() {
 
       <div className="lg:pl-64">
         <main id="main" className={`mx-auto w-full px-4 pb-28 pt-3 sm:px-6 lg:pb-10 ${wide ? 'max-w-6xl' : 'max-w-2xl'}`}>
-          {own === 0 && <PageHeader title={DEFAULT_TITLE[pathname.split('/')[1] ?? ''] ?? 'MASA'} />}
+          {own === 0 && <PageHeader isDefault title={DEFAULT_TITLE[pathname.split('/')[1] ?? ''] ?? 'MASA'} />}
           {/* Simple CSS enter animation (no exit animation, so a page can never get stuck invisible) */}
           <div key={section} className="page-enter" style={{ ['--dx' as string]: `${22 * dir.current}px` }}>
             <ErrorBoundary key={pathname}><Outlet /></ErrorBoundary>
