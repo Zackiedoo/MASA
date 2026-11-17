@@ -1,4 +1,4 @@
-import { newKey, patch, read, stamp } from '../lib/database';
+import { newKey, patch, read, serverNow, stamp } from '../lib/database';
 import type { Report, UserProfile, WallIdentity, WallPost } from '../types';
 import { logActivity } from './logService';
 
@@ -22,15 +22,16 @@ export async function createPost(p: UserProfile, content: string, anonymous: boo
     anonymous,
     content,
     createdAt: stamp(),
-    expiresAt: Date.now() + hours * HOUR,
+    expiresAt: serverNow() + hours * HOUR, // server clock: the rules accept only the 3/6/12/24 h options ±2 min
     status: requireApproval ? 'pending' : 'approved',
   };
   await patch({
     [`${requireApproval ? 'freedomWallQueue' : 'freedomWall'}/${id}`]: post,
     [`freedomWallPrivate/${id}`]: { uid: p.uid, studentId: p.studentId, fullName: p.fullName },
-    [`userPosts/${p.uid}/${id}`]: true, // lets the author's own posts be recognised (and edited/deleted) without exposing identities
     [`rateLimits/${p.uid}/post`]: stamp(),
   });
+  // Lets the author's own posts be recognised (to edit/delete them) without exposing identities. Kept separate so a problem here can never block the post itself.
+  await patch({ [`userPosts/${p.uid}/${id}`]: true }).catch(() => undefined);
   return { id, pending: requireApproval };
 }
 

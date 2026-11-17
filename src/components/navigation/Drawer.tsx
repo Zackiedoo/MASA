@@ -23,8 +23,8 @@ export function Drawer({ open, onClose }: { open: boolean; onClose: () => void }
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[60]" data-no-swipe>
-          <motion.div className="absolute inset-0 bg-black/40 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+        <div className="fixed inset-0 z-[90]" data-no-swipe>
+          <motion.div className="absolute inset-0 bg-black/45 backdrop-blur-[3px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
           <motion.aside role="dialog" aria-modal="true" aria-label="Menu" className="glass absolute inset-y-0 left-0 flex w-[19rem] max-w-[86vw] flex-col gap-1 rounded-r-[2rem] bg-bg/95 p-4"
             initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', damping: 30, stiffness: 320 }}>
             <div className="mb-3 flex items-center justify-between px-2 pt-1"><Wordmark /><button className="btn btn-ghost btn-icon btn-sm" onClick={onClose} aria-label="Close menu"><X className="h-4 w-4" /></button></div>

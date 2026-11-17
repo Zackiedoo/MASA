@@ -1,7 +1,12 @@
-import type { ReactNode } from 'react';
+import { createContext, useContext, useLayoutEffect, type ReactNode } from 'react';
 
-/** Sticky glass header: left slot · centred title · right slot. */
+/** Lets AppShell know whether the current page draws its own banner, so it can supply a default one when it doesn't. */
+export const BannerCtx = createContext<{ claim: () => () => void }>({ claim: () => () => undefined });
+
+/** Sticky glass banner: left slot · centred title · right slot. AppShell shows a default one on any page that has none, so it is always there. */
 export function PageHeader({ left, title, right }: { left?: ReactNode; title: ReactNode; right?: ReactNode }) {
+  const { claim } = useContext(BannerCtx);
+  useLayoutEffect(() => claim(), [claim]);
   return (
     <header className="glass sticky top-2 z-20 mb-4 grid min-h-14 grid-cols-[3rem_1fr_3rem] items-center gap-2 rounded-full px-2 py-1.5">
       <div className="flex justify-start">{left}</div>

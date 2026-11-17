@@ -70,7 +70,7 @@ export function UsersTab() {
         </section>
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <label className="relative min-w-48 flex-1"><span className="sr-only">Search users</span><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><input className="field pl-10" placeholder="Search name or ID" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+        <label className="relative min-w-48 flex-1"><span className="sr-only">Search users</span><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><input className="field field-icon" placeholder="Search name or ID" value={q} onChange={(e) => setQ(e.target.value)} /></label>
         <button className="btn btn-primary" onClick={() => setCreating(true)}><Plus className="h-4 w-4" />Create accounts</button>
       </div>
       <Segmented label="Role filter" value={role} onChange={setRole} options={ROLES} />

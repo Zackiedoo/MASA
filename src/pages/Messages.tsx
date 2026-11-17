@@ -30,7 +30,7 @@ function MessagesHome() {
     <>
       <PageHeader title="MESSAGES" />
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <label className="relative min-w-0 flex-1"><span className="sr-only">Search your subjects</span><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><input className="field pl-10" placeholder="Search your subjects" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+        <label className="relative min-w-0 flex-1"><span className="sr-only">Search your subjects</span><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><input className="field field-icon" placeholder="Search your subjects" value={q} onChange={(e) => setQ(e.target.value)} /></label>
         {role === 'student' && <button className="btn btn-primary" onClick={() => setAdding(true)}><Plus className="h-4 w-4" />Add subject</button>}
         {role === 'professor' && (
           <>

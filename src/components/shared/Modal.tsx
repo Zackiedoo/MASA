@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -18,14 +19,16 @@ export function Modal({ open, onClose, title, children, wide, footer }: Props) {
     return () => { document.body.style.overflow = prevOverflow; window.removeEventListener('keydown', key); prevFocus?.focus?.(); };
   }, [open, onClose]);
 
-  return (
+  // Rendered into <body> so the dim/blur always covers the WHOLE screen (sidebar, banner, nav) and the dialog is centred on the
+  // window, no matter which animated or scrolling container the caller sits in.
+  return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6" data-no-swipe>
-          <motion.div className="absolute inset-0 bg-black/40 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+        <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-6" data-no-swipe>
+          <motion.div className="absolute inset-0 bg-black/45 backdrop-blur-[3px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
           <motion.div
             ref={panel} role="dialog" aria-modal="true" aria-label={title}
-            className={`glass relative flex max-h-[92dvh] w-full flex-col rounded-t-[2rem] bg-bg/90 sm:rounded-[2rem] ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}
+            className={`relative flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-[2rem] border border-[rgb(var(--line))] bg-bg shadow-2xl sm:rounded-[2rem] ${wide ? 'sm:max-w-3xl' : 'sm:max-w-lg'}`}
             initial={{ y: 40, opacity: 0, scale: 0.98 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 30, opacity: 0 }} transition={{ type: 'spring', damping: 28, stiffness: 320 }}
           >
             <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-5">
@@ -37,6 +40,7 @@ export function Modal({ open, onClose, title, children, wide, footer }: Props) {
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

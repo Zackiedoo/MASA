@@ -23,7 +23,7 @@ export function SubjectSearchModal({ open, onClose }: { open: boolean; onClose: 
   return (
     <Modal open={open} onClose={onClose} title="Add subject">
       <div className="space-y-3">
-        <label className="relative block"><span className="sr-only">Search subjects</span><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><input className="field pl-10" placeholder="Search by code, name or professor" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+        <label className="relative block"><span className="sr-only">Search subjects</span><Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" /><input className="field field-icon" placeholder="Search by code, name or professor" value={q} onChange={(e) => setQ(e.target.value)} /></label>
         {results.length === 0 ? <p className="py-6 text-center text-sm text-muted">No subjects found.</p> : (
           <ul className="space-y-2">
             {results.map((s) => {

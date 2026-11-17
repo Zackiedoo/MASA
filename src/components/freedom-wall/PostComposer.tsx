@@ -29,7 +29,7 @@ export function PostComposer({ open, onClose, profile, requireApproval }: { open
       const { pending } = await createPost(profile, content, anon, hours, requireApproval);
       toast(pending ? 'Submitted! Your post will appear once an administrator approves it.' : 'Posted to the Freedom Wall.');
       setText(''); onClose();
-    } catch (x) { setErr(explainError(x)); } finally { setBusy(false); }
+    } catch (x) { console.error('Freedom Wall post failed', x); setErr(/permission/i.test(String((x as Error)?.message) + String((x as { code?: string })?.code)) ? 'The database refused this post. Possible reasons: you posted again within 30 seconds, you have not accepted the Freedom Wall terms, or the latest security rules have not been deployed yet (administrator: run firebase deploy --only database).' : explainError(x)); } finally { setBusy(false); }
   }
 
   return (

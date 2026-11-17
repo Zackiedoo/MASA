@@ -5,6 +5,7 @@ import { Home, MessageSquare, Sparkles, UserRound } from 'lucide-react';
 import { Wordmark } from '../shared/Logo';
 import { DemoBanner } from '../shared/DemoBanner';
 import { Drawer } from './Drawer';
+import { BannerCtx, PageHeader } from './PageHeader';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { useSubjects } from '../../contexts/SubjectsContext';
 import { MAIN_TABS, tabIndexFor, useSwipeNav } from '../../hooks/useSwipeNav';
@@ -20,8 +21,14 @@ const NAV = [
 const ShellCtx = createContext<{ openMenu: () => void }>({ openMenu: () => undefined });
 export const useShell = () => useContext(ShellCtx);
 
+const DEFAULT_TITLE: Record<string, string> = { '': 'MASA', login: 'LOG IN', register: 'REGISTER', a: 'ANNOUNCEMENT', legal: 'LEGAL', settings: 'SETTINGS', publish: 'PUBLISH', admin: 'ADMIN', messages: 'MESSAGES', profile: 'PROFILE', wall: 'FREEDOM WALL' };
+
 export function AppShell() {
   const [menu, setMenu] = useState(false);
+  // Count of pages currently drawing their own banner; when none does (login screen, "waiting for approval", 404, legal…), a default banner is shown.
+  const [own, setOwn] = useState(0);
+  const claim = useCallback(() => { setOwn((n) => n + 1); return () => setOwn((n) => n - 1); }, []);
+  const bannerCtx = useMemo(() => ({ claim }), [claim]);
   const { pathname } = useLocation();
   const { unreadCount, pendingCount } = useSubjects();
   const prevIdx = useRef(0);
@@ -37,6 +44,7 @@ export function AppShell() {
   const section = pathname === '/' ? 'home' : pathname.split('/')[1];
 
   return (
+    <BannerCtx.Provider value={bannerCtx}>
     <ShellCtx.Provider value={ctx}>
       <div className="app-bg" aria-hidden="true" />
       <DemoBanner />
@@ -57,6 +65,7 @@ export function AppShell() {
 
       <div className="lg:pl-64">
         <main id="main" className={`mx-auto w-full px-4 pb-28 pt-3 sm:px-6 lg:pb-10 ${wide ? 'max-w-6xl' : 'max-w-2xl'}`}>
+          {own === 0 && <PageHeader title={DEFAULT_TITLE[pathname.split('/')[1] ?? ''] ?? 'MASA'} />}
           {/* Simple CSS enter animation (no exit animation, so a page can never get stuck invisible) */}
           <div key={section} className="page-enter" style={{ ['--dx' as string]: `${22 * dir.current}px` }}>
             <ErrorBoundary key={pathname}><Outlet /></ErrorBoundary>
@@ -84,5 +93,6 @@ export function AppShell() {
       </nav>
       <Drawer open={menu} onClose={() => setMenu(false)} />
     </ShellCtx.Provider>
+    </BannerCtx.Provider>
   );
 }

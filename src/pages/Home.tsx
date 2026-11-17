@@ -56,7 +56,7 @@ export default function Home() {
           <label className="relative block">
             <span className="sr-only">Search announcements</span>
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <input autoFocus className="field pl-10" placeholder="Search title, content or source…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input autoFocus className="field field-icon" placeholder="Search title, content or source…" value={q} onChange={(e) => setQ(e.target.value)} />
           </label>
           <div className="scroll-x flex gap-2" role="group" aria-label="Filter by source">
             {FILTERS.map((f) => <button key={f.v} className="chip" aria-pressed={filter === f.v} onClick={() => { setFilter(f.v); setOrgId(''); }}>{f.label}</button>)}

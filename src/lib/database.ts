@@ -13,6 +13,13 @@ if (isDemoMode) demoInit(buildSeed);
 /** Server-side timestamp (Firebase) or client time (demo). Security rules require `createdAt === now`. */
 export const stamp = (): number => (isDemoMode ? Date.now() : (serverTimestamp() as unknown as number));
 
+// The security rules check expiry times against the SERVER clock (±2 min). A PC whose clock is off would be refused, so we
+// measure the difference once and use it whenever the app computes a future time.
+let serverOffset = 0;
+if (!isDemoMode && firebaseDb) onValue(ref(firebaseDb, '.info/serverTimeOffset'), (s) => { serverOffset = Number(s.val()) || 0; }, () => undefined);
+/** "Now" according to the database server. */
+export const serverNow = (): number => Date.now() + serverOffset;
+
 /** Subscribe to a path. Returns an unsubscribe function. `null` means "no data". */
 export function watch<T>(path: string, cb: (v: T | null) => void, onError?: (e: Error) => void, opts?: WatchOptions): Unsub {
   if (isDemoMode || !firebaseDb) return demoWatch(path, cb, opts);
