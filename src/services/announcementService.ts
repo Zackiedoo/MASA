@@ -1,3 +1,4 @@
+import { notifyServer } from '../lib/notifyApi';
 import { newKey, patch, stamp } from '../lib/database';
 import { safeFileName, uploadFile } from '../lib/storage';
 import type { Announcement, Attachment, SourceType } from '../types';
@@ -34,6 +35,7 @@ export async function createAnnouncement(uid: string, input: AnnouncementInput) 
     },
   });
   await logActivity(uid, 'announcement.publish', input.title);
+  notifyServer({ type: 'announcement', id });
   return id;
 }
 

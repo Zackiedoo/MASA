@@ -1,3 +1,4 @@
+import { notifyServer } from '../lib/notifyApi';
 import { newKey, patch, stamp } from '../lib/database';
 import type { Day, ScheduleSlot, ScheduleStatus } from '../types';
 import { logActivity } from './logService';
@@ -27,5 +28,6 @@ export async function setStatus(actor: string, subjectId: string, subjectCode: s
     [`classSchedules/${subjectId}/${slot.id}/updatedAt`]: stamp(),
     [`scheduleHistory/${subjectId}/${newKey(`scheduleHistory/${subjectId}`)}`]: { slotId: slot.id, from: slot.status, to, by: actor, at: stamp() },
   });
+  notifyServer({ type: 'schedule', subjectId });
   await logActivity(actor, 'schedule.status', `${subjectCode} ${slot.day} ${slot.startTime}: ${slot.status} → ${to}`);
 }

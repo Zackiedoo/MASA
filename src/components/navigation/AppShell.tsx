@@ -5,6 +5,7 @@ import { Home, MessageSquare, Sparkles, UserRound } from 'lucide-react';
 import { Wordmark } from '../shared/Logo';
 import { DemoBanner } from '../shared/DemoBanner';
 import { Drawer } from './Drawer';
+import { PushBridge } from '../notifications/PushBridge';
 import { BannerCtx, PageHeader } from './PageHeader';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { useSubjects } from '../../contexts/SubjectsContext';
@@ -48,6 +49,7 @@ export function AppShell() {
     <ShellCtx.Provider value={ctx}>
       <div className="app-bg" aria-hidden="true" />
       <DemoBanner />
+      <PushBridge />
 
       {/* Desktop / tablet-landscape: spacious sidebar with the same four sections */}
       <aside className="glass fixed inset-y-0 left-0 z-30 hidden w-64 flex-col gap-2 rounded-r-[2rem] border-l-0 p-5 lg:flex" style={{ top: 'var(--banner,0px)' }}>

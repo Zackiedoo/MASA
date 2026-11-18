@@ -1,3 +1,4 @@
+import { notifyServer } from '../lib/notifyApi';
 import { newKey, patch, read, serverNow, stamp } from '../lib/database';
 import type { Report, UserProfile, WallIdentity, WallPost } from '../types';
 import { logActivity } from './logService';
@@ -56,6 +57,7 @@ export async function reportPost(uid: string, postId: string, reason: string) {
     if (/permission[_-]denied/i.test(String((e as { code?: string })?.code) + String((e as Error)?.message))) throw new Error('This report could not be sent. You may have already reported this post, or you reported another one a few seconds ago. Please wait a moment and try again.');
     throw e;
   }
+  notifyServer({ type: 'report' });
 }
 
 // ───── moderation (administrators) ─────

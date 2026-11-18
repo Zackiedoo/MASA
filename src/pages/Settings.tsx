@@ -1,3 +1,4 @@
+import { NotificationsCard } from '../components/notifications/NotificationsCard';
 import { useState } from 'react';
 import { ROLE_LABEL } from '../lib/permissions';
 import { Link } from 'react-router-dom';
@@ -46,6 +47,8 @@ export default function Settings() {
           <div className="space-y-2"><p className="text-sm font-semibold">Font size</p><Segmented label="Font size" value={settings.fontSize} onChange={(v) => update({ fontSize: v })} options={SIZES} /></div>
           <div className="flex items-center justify-between gap-4"><div><p className="text-sm font-semibold">Reduce motion</p><p className="text-xs text-muted">Turns off animations and transitions.</p></div><Toggle checked={settings.reduceMotion} onChange={(v) => update({ reduceMotion: v })} label="Reduce motion" /></div>
         </Section>
+
+        <Section title="Notifications"><NotificationsCard /></Section>
 
         <Section title="Terms and agreements">
           {[['terms', 'General Terms of Service'], ['privacy', 'Privacy Policy'], ['freedom-wall', 'Freedom Wall Terms and Agreement']].map(([k, label]) => (

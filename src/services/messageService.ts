@@ -1,3 +1,4 @@
+import { notifyServer } from '../lib/notifyApi';
 import { newKey, patch, read, stamp } from '../lib/database';
 import type { JoinRequest, Subject, UserProfile } from '../types';
 import { logActivity } from './logService';
@@ -17,6 +18,7 @@ export async function decideRequest(prof: string, subject: Subject, req: JoinReq
     [`subjectMembers/${subject.id}/${req.uid}`]: approve ? { studentId: req.studentId, fullName: req.studentName, enrolledAt: stamp(), by: prof } : null,
   });
   await logActivity(prof, approve ? 'subject.approve_member' : 'subject.reject_member', `${subject.subjectCode}: ${req.studentId}`);
+  notifyServer({ type: 'membership', subjectId: subject.id, studentUid: req.uid });
 }
 
 export async function sendMessage(subjectId: string, p: UserProfile, content: string) {
@@ -25,6 +27,7 @@ export async function sendMessage(subjectId: string, p: UserProfile, content: st
     [`messages/${subjectId}/${id}`]: { senderId: p.uid, senderName: p.nickname, content, createdAt: stamp(), messageType: 'text' },
     [`subjectMeta/${subjectId}`]: { text: `${p.nickname}: ${content}`.slice(0, 140), at: stamp(), by: p.uid, kind: 'message' },
   });
+  notifyServer({ type: 'subject', subjectId });
 }
 
 export async function deleteMessage(subjectId: string, id: string) {
@@ -38,6 +41,7 @@ export async function postClassUpdate(subjectId: string, prof: UserProfile, titl
     [`subjectMeta/${subjectId}`]: { text: `${kind === 'announcement' ? 'Announcement' : 'Update'}: ${title}`.slice(0, 140), at: stamp(), by: prof.uid, kind },
   });
   await logActivity(prof.uid, 'classupdate.post', title);
+  notifyServer({ type: 'subject', subjectId });
 }
 
 export async function markRead(uid: string, subjectId: string) {
@@ -59,6 +63,7 @@ export async function enrollStudent(actor: string, subject: Subject, studentId: 
     [`joinRequests/${subject.id}/${hit.uid}`]: null, // a pending request, if any, is now moot
   });
   await logActivity(actor, 'subject.enroll_student', `${subject.subjectCode}: ${id}`);
+  notifyServer({ type: 'membership', subjectId: subject.id, studentUid: hit.uid });
   return { fullName: hit.fullName };
 }
 

@@ -387,6 +387,31 @@ const rules = {
       },
     },
 
+    // ───────────── Push notifications ─────────────
+    // A device registers its own token (even before approval, so applicants can hear back). Only the server reads tokens.
+    pushTokens: {
+      $uid: {
+        $key: {
+          '.write': 'auth != null && auth.uid === $uid',
+          '.validate': "newData.hasChildren(['token','createdAt'])",
+          token: { '.validate': 'newData.isString() && newData.val().length > 20 && newData.val().length < 4096' },
+          createdAt: { '.validate': 'newData.isNumber()' },
+          ua: { '.validate': 'newData.isString() && newData.val().length < 200' },
+          $other: { '.validate': false },
+        },
+      },
+    },
+    pushPrefs: {
+      $uid: {
+        '.read': 'auth != null && auth.uid === $uid',
+        '.write': 'auth != null && auth.uid === $uid',
+        announcements: { '.validate': 'newData.isBoolean()' },
+        messages: { '.validate': 'newData.isBoolean()' },
+        classes: { '.validate': 'newData.isBoolean()' },
+        $other: { '.validate': false },
+      },
+    },
+
     // ───────────── Settings, logs, misc ─────────────
     userSettings: {
       $uid: {

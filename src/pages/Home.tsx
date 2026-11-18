@@ -1,3 +1,4 @@
+import { PushPrompt } from '../components/notifications/PushPrompt';
 import { useMemo, useState } from 'react';
 import { Menu, Search, SearchX, X, Megaphone } from 'lucide-react';
 import { PageHeader } from '../components/navigation/PageHeader';
@@ -43,6 +44,8 @@ export default function Home() {
         title={<span className="gradient-text text-base">MASA</span>}
         right={<button className="btn btn-ghost btn-icon btn-sm" onClick={() => { setSearching((s) => !s); if (searching) { setQ(''); setFilter('all'); } }} aria-label={searching ? 'Close search' : 'Search announcements'} aria-expanded={searching}>{searching ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}</button>}
       />
+
+      <PushPrompt />
 
       {!searching && !q && (
         <section className="mb-5 px-1">

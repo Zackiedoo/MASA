@@ -122,6 +122,25 @@ Push to GitHub → Vercel **Add New Project** → import. Framework *Vite* is de
 
 **Upgrading an existing deployment.** Accounts created before this version have no `approvalStatus`; they are treated as approved. After deploying, sign in as an administrator → **Admin → Settings → Rebuild the student lookup** once. This builds the Student-ID index professors use to enroll students and upgrades older course rosters so names show.
 
+## Notifications (phones and browsers)
+
+MASA sends **web-push notifications** through Firebase Cloud Messaging (free). People turn them on in **Settings → Notifications** (and a one-time prompt on Home); each device registers its own token under `pushTokens/{uid}`.
+
+| Event | Who is notified |
+|---|---|
+| New announcement | Everyone with notifications on (except the author); can be muted |
+| Chat message / professor post in a subject group | Group members and the professor; can be muted |
+| Class status changed (green / yellow / red) | Students enrolled in that course; can be muted |
+| Join request decided, or enrolled by a professor | That student |
+| Registration approved / rejected | The applicant |
+| New registration, or a Freedom Wall report | Administrators |
+
+How it works: after an action succeeds the app calls `/api/notify`; the server **re-reads what was just written, checks the caller is allowed to have done it, and writes the notification text itself** (the client can't make it send arbitrary messages). Only the server can read tokens.
+
+Phones: **Android (Chrome)** works in the browser or when installed. **iPhone** needs iOS 16.4+ and MASA added to the Home Screen (Safari → Share → Add to Home Screen); Settings shows these steps. Notifications don't work in demo mode.
+
+Setup: nothing extra on Vercel. Deploy the updated database rules (`firebase deploy --only database`). Optionally set `VITE_FIREBASE_VAPID_KEY` (Project settings → Cloud Messaging → Web Push certificates); without it Firebase's default key is used. The service account must be allowed to send FCM messages (the default one is).
+
 ## How the main pieces work
 
 **Authentication** – Firebase Auth (e-mail/password) behind a Student-ID login. Passwords are never stored in the database. First login with a temporary password forces a change. “Forgot password” files a request (`/resetRequests/<id>`) that an admin resolves by issuing a new temporary password (students cannot receive e-mail).

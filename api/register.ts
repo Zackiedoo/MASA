@@ -4,6 +4,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createHash } from 'node:crypto';
 import { adminAuth, adminDb, HttpError, loginIdToEmail, LOGIN_ID_PATTERN, logActivity, route } from './_lib/admin.js';
+import { adminUids, pushToUsers } from './_lib/push.js';
 import { AVATARS, checkPassword, clean, nicknameFrom } from './_lib/accounts.js';
 
 const MAX_PENDING = 200; // stops a flood of fake sign-ups from filling the approval queue
@@ -56,5 +57,6 @@ export default route(['POST'], async (req: VercelRequest, res: VercelResponse) =
     registration: { contactEmail, note, ...(role === 'organization' ? { orgName, orgDescription } : {}) },
   });
   await logActivity(`registration:${user.uid}`, 'account.register', `${role}:${loginId}`);
+  await pushToUsers(await adminUids(), 'admin', { title: 'New registration to review', body: `${fullName} (${role}) is waiting for approval.`, link: '/admin' }).catch(() => undefined);
   res.status(200).json({ ok: true });
 });
