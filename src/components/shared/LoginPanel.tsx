@@ -37,7 +37,7 @@ export function LoginPanel({ reason }: { reason?: string }) {
         </div>
         {(err || notice) && <ErrorBox message={(err || notice) as string} />}
         <form onSubmit={submit} className="space-y-4">
-          <Field label="Student ID / Username">{(fid) => <input id={fid} className="field" value={id} onChange={(e) => setId(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="e.g. 2024-0001" required />}</Field>
+          <Field label="User ID">{(fid) => <input id={fid} className="field" value={id} onChange={(e) => setId(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="Your User ID" required />}</Field>
           <Field label="Password">{(fid) => <PasswordInput id={fid} value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" placeholder="Your password" required />}</Field>
           <button className="btn btn-primary w-full" disabled={busy}>{busy ? 'Signing in…' : 'Log in'}</button>
         </form>
@@ -62,7 +62,7 @@ function ForgotPassword({ open, onClose }: { open: boolean; onClose: () => void 
   const [busy, setBusy] = useState(false);
   async function send(e: FormEvent) {
     e.preventDefault(); setErr(null);
-    if (!isLoginId(id.trim())) return setErr('Enter a valid Student ID (3–20 letters, numbers or dashes).');
+    if (!isLoginId(id.trim())) return setErr('Enter a valid User ID (3–20 letters, numbers or dashes).');
     setBusy(true);
     try { await submitResetRequest(id.trim()); setDone(true); }
     catch (x) { const m = explainError(x); setErr(/permission/i.test(m) ? 'A reset request for this ID is already waiting for an administrator.' : m); }
@@ -74,9 +74,9 @@ function ForgotPassword({ open, onClose }: { open: boolean; onClose: () => void 
         <p className="text-sm">Request sent. An administrator will verify your identity and give you a temporary password. You will be asked to choose a new one when you log in.</p>
       ) : (
         <form onSubmit={send} className="space-y-4">
-          <p className="text-sm text-muted">For your security, passwords are reset by an administrator. Enter your Student ID to notify them.</p>
+          <p className="text-sm text-muted">For your security, passwords are reset by an administrator. Enter your User ID to notify them.</p>
           {err && <ErrorBox message={err} />}
-          <Field label="Student ID">{(fid) => <input id={fid} className="field" value={id} onChange={(e) => setId(e.target.value)} autoCapitalize="none" required />}</Field>
+          <Field label="User ID">{(fid) => <input id={fid} className="field" value={id} onChange={(e) => setId(e.target.value)} autoCapitalize="none" required />}</Field>
           <button className="btn btn-primary w-full" disabled={busy}>{busy ? 'Sending…' : 'Send reset request'}</button>
         </form>
       )}

@@ -62,5 +62,5 @@ function MessagesHome() {
 }
 
 export default function Messages() {
-  return <AuthGate roles={['student', 'professor', 'admin']} reason="Log in with your Student ID to see your subject groups and class updates."><MessagesHome /></AuthGate>;
+  return <AuthGate roles={['student', 'professor', 'admin']} reason="Log in to see your subject groups and class updates."><MessagesHome /></AuthGate>;
 }

@@ -83,7 +83,7 @@ export function demoSet(path: string, value: any) {
 }
 
 export function demoPatch(updates: Record<string, any>) {
-  for (const [p, v] of Object.entries(updates)) setAt(p, clone(v));
+  for (const [p, v] of Object.entries(updates)) setAt(p, v && typeof v === 'object' && '__inc' in v ? Number(getAt(p) ?? 0) + Number((v as any).__inc) : clone(v));
   persist();
   notify();
 }

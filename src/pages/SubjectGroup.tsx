@@ -87,7 +87,7 @@ function Group() {
       )}
 
       {isProf || role === 'admin' ? (
-        <Modal open={sched} onClose={() => setSched(false)} title={`${subject.subjectCode} schedule`} wide><ProfessorSchedulePanel subject={subject} actorUid={profile.uid} canEditSlots={role === 'admin'} /></Modal>
+        <Modal open={sched} onClose={() => setSched(false)} title={`${subject.subjectCode} schedule`} wide><ProfessorSchedulePanel subject={subject} actorUid={profile.uid} canEditSlots /></Modal>
       ) : <ScheduleModal open={sched} onClose={() => setSched(false)} subjects={[subject]} />}
       {(isProf || role === 'admin') && <RosterPanel open={rosterOpen} onClose={() => setRosterOpen(false)} subject={subject} actorUid={profile.uid} />}
       {isProf && <RequestsPanel open={reqOpen} onClose={() => setReqOpen(false)} subjects={[subject]} profUid={profile.uid} />}

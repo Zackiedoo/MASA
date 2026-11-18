@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { EyeOff } from 'lucide-react';
 import { Modal } from '../shared/Modal';
 import { ProfileAvatar } from '../shared/Avatar';
 import { Toggle } from '../shared/Field';
 import { ErrorBox } from '../shared/States';
-import { createPost, DURATIONS } from '../../services/freedomWallService';
+import { createPost, DURATIONS, MAX_POSTS_PER_DAY, postsLeftToday } from '../../services/freedomWallService';
 import { explainError } from '../../lib/database';
 import { cleanText, hasBlockedWord } from '../../utils/validation';
 import { useToast } from '../../contexts/ToastContext';
@@ -17,6 +17,8 @@ export function PostComposer({ open, onClose, profile, requireApproval }: { open
   const [hours, setHours] = useState<number>(24);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [left, setLeft] = useState<number | null>(null);
+  useEffect(() => { if (open) void postsLeftToday(profile.uid).then(setLeft); }, [open, profile.uid]);
 
   async function submit(e: FormEvent) {
     e.preventDefault(); setErr(null);
@@ -24,12 +26,13 @@ export function PostComposer({ open, onClose, profile, requireApproval }: { open
     if (!content) return setErr('Write something first.');
     if (content.length > 500) return setErr('Posts are limited to 500 characters.');
     if (hasBlockedWord(content)) return setErr('Your post contains language that is not allowed on the Freedom Wall.');
+    if (left === 0) return setErr(`You have used all ${MAX_POSTS_PER_DAY} posts for today. Your allowance resets at 12:00 am.`);
     setBusy(true);
     try {
       const { pending } = await createPost(profile, content, anon, hours, requireApproval);
       toast(pending ? 'Submitted! Your post will appear once an administrator approves it.' : 'Posted to the Freedom Wall.');
-      setText(''); onClose();
-    } catch (x) { console.error('Freedom Wall post failed', x); setErr(/permission/i.test(String((x as Error)?.message) + String((x as { code?: string })?.code)) ? 'The database refused this post. Possible reasons: you posted again within 30 seconds, you have not accepted the Freedom Wall terms, or the latest security rules have not been deployed yet (administrator: run firebase deploy --only database).' : explainError(x)); } finally { setBusy(false); }
+      setText(''); setLeft((n) => (n === null ? n : Math.max(0, n - 1))); onClose();
+    } catch (x) { console.error('Freedom Wall post failed', x); setErr(/permission/i.test(String((x as Error)?.message) + String((x as { code?: string })?.code)) ? 'The database refused this post. Possible reasons: you posted again within 30 seconds, you have reached the daily limit of 3 posts, you have not accepted the Freedom Wall terms, or the latest security rules have not been deployed yet (administrator: run firebase deploy --only database).' : explainError(x)); } finally { setBusy(false); }
   }
 
   return (
@@ -54,8 +57,9 @@ export function PostComposer({ open, onClose, profile, requireApproval }: { open
           <label htmlFor="wall-dur" className="mb-1.5 block text-sm font-semibold">Disappears after</label>
           <select id="wall-dur" className="field" value={hours} onChange={(e) => setHours(Number(e.target.value))}>{DURATIONS.map((h) => <option key={h} value={h}>{h} hours</option>)}</select>
         </div>
+        {left !== null && <p className={`text-xs ${left === 0 ? 'font-semibold text-bad' : 'text-muted'}`}>{left === 0 ? `Daily limit reached (${MAX_POSTS_PER_DAY} posts). It resets at 12:00 am.` : `${left} of ${MAX_POSTS_PER_DAY} posts left today (resets at 12:00 am).`}</p>}
         {requireApproval && <p className="text-xs text-muted">Posts are reviewed by an administrator before they appear.</p>}
-        <div className="flex justify-end gap-2"><button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={busy || !text.trim()}>{busy ? 'Posting…' : 'Post'}</button></div>
+        <div className="flex justify-end gap-2"><button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button><button className="btn btn-primary" disabled={busy || !text.trim() || left === 0}>{busy ? 'Posting…' : 'Post'}</button></div>
       </form>
     </Modal>
   );

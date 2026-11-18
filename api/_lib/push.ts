@@ -41,8 +41,23 @@ export async function adminUids(): Promise<string[]> {
   return Object.keys((snap.val() as Record<string, unknown>) ?? {});
 }
 
+export interface SendReport { tokens: number; sent: number; errors: string[] }
+
+/** Sends to the caller's own devices and reports exactly what happened (used by the Settings "Send test" button). */
+export async function pushTest(uid: string, p: Payload): Promise<SendReport> {
+  const snap = await adminDb().ref(`pushTokens/${uid}`).get();
+  const targets: { token: string; uid: string; key: string }[] = [];
+  snap.forEach((t) => { const v = t.val(); if (v?.token) targets.push({ token: v.token, uid, key: String(t.key) }); });
+  return sendDetailed(targets, p);
+}
+
 async function send(targets: { token: string; uid: string; key: string }[], p: Payload): Promise<number> {
-  if (!targets.length) return 0;
+  return (await sendDetailed(targets, p)).sent;
+}
+
+async function sendDetailed(targets: { token: string; uid: string; key: string }[], p: Payload): Promise<SendReport> {
+  const errors: string[] = [];
+  if (!targets.length) return { tokens: 0, sent: 0, errors };
   const messaging = getMessaging(getApps()[0]);
   const dead: string[] = [];
   let ok = 0;
@@ -56,9 +71,10 @@ async function send(targets: { token: string; uid: string; key: string }[], p: P
     ok += r.successCount;
     r.responses.forEach((x, j) => {
       const code = x.error?.code || '';
+      if (!x.success) { errors.push(`${code}: ${x.error?.message ?? ''}`.slice(0, 300)); console.error('push failed', code, x.error?.message); }
       if (!x.success && /registration-token-not-registered|invalid-registration-token|invalid-argument/.test(code)) dead.push(`pushTokens/${batch[j].uid}/${batch[j].key}`);
     });
   }
   if (dead.length) await adminDb().ref().update(Object.fromEntries(dead.map((d) => [d, null]))); // forget uninstalled / expired devices
-  return ok;
+  return { tokens: targets.length, sent: ok, errors: [...new Set(errors)] };
 }

@@ -15,7 +15,7 @@ export function ConversationCard({ row }: { row: SubjectRow }) {
         <p className="truncate text-xs text-muted">{s.professorName}</p>
         <p className={`mt-0.5 truncate text-sm ${unread ? 'font-semibold' : 'text-muted'}`}>{meta?.text ?? 'No messages yet'}</p>
       </div>
-      {unread && <span className="h-3 w-3 shrink-0 rounded-full bg-gold ring-4 ring-gold/25" aria-label="Unread updates" />}
+      {unread && <span className="h-3 w-3 shrink-0 rounded-full bg-[#ff1f3d] ring-4 ring-[#ff1f3d]/25" aria-label="Unread updates" />}
     </Link>
   );
 }

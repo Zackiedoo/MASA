@@ -373,7 +373,7 @@
       "$sid": {
         ".read": "(((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'admin') || (((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'professor') && root.child('subjects/'+$sid+'/professorId').val() === auth.uid) || ((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('subjectMembers/'+$sid+'/'+auth.uid).exists()))",
         "$slot": {
-          ".write": "((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'admin')",
+          ".write": "(((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'admin') || (((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'professor') && root.child('subjects/'+$sid+'/professorId').val() === auth.uid))",
           ".validate": "newData.hasChildren(['day','startTime','endTime','status'])",
           "day": {
             ".validate": "newData.isString() && newData.val().matches(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/)"
@@ -424,7 +424,7 @@
         "createdAt"
       ],
       "$pid": {
-        ".write": "((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'admin') || (!newData.exists() && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid) || (!data.exists() && newData.exists() && ((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'student') && root.child('freedomWallTerms/'+auth.uid+'/accepted').val() === true && root.child('settings/freedomWall/requireApproval').val() !== true && newData.child('status').val() === 'approved' && newData.parent().parent().child('rateLimits').child(auth.uid).child('post').val() === now && newData.parent().parent().child('freedomWallPrivate').child($pid).child('uid').val() === auth.uid)",
+        ".write": "((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'admin') || (!newData.exists() && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid) || (!data.exists() && newData.exists() && ((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'student') && root.child('freedomWallTerms/'+auth.uid+'/accepted').val() === true && root.child('settings/freedomWall/requireApproval').val() !== true && newData.child('status').val() === 'approved' && newData.parent().parent().child('rateLimits').child(auth.uid).child('post').val() === now && newData.parent().parent().child('freedomWallPrivate').child($pid).child('uid').val() === auth.uid && newData.parent().parent().child('postQuota').child(auth.uid).child('day').val() === ((now + 28800000) - (now + 28800000) % 86400000) / 86400000 && newData.parent().parent().child('postQuota').child(auth.uid).child('count').val() <= 3 && (root.child('postQuota/'+auth.uid+'/day').val() === ((now + 28800000) - (now + 28800000) % 86400000) / 86400000 ? newData.parent().parent().child('postQuota').child(auth.uid).child('count').val() === root.child('postQuota/'+auth.uid+'/count').val() + 1 : newData.parent().parent().child('postQuota').child(auth.uid).child('count').val() === 1))",
         ".validate": "newData.hasChildren(['authorLabel','anonymous','content','createdAt','expiresAt','status'])",
         "authorLabel": {
           ".validate": "newData.isString() && newData.val().length <= 60 && newData.val().length >= 1 && (((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'admin') || (newData.parent().child('anonymous').val() === true && newData.val() === 'Anonymous') || (newData.parent().child('anonymous').val() === false && newData.val() === root.child('users/'+auth.uid+'/nickname').val()))"
@@ -442,6 +442,14 @@
         },
         "flagged": {
           ".validate": "newData.isBoolean() && ((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'admin')"
+        },
+        "likes": {
+          ".write": "((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'student') && newData.val() === (data.exists() ? data.val() : 0) + ((newData.parent().parent().parent().child('userVotes').child(auth.uid).child($pid).val() === 1 ? 1 : 0) - (root.child('userVotes/'+auth.uid+'/'+$pid).val() === 1 ? 1 : 0))",
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+        "dislikes": {
+          ".write": "((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'student') && newData.val() === (data.exists() ? data.val() : 0) + ((newData.parent().parent().parent().child('userVotes').child(auth.uid).child($pid).val() === -1 ? 1 : 0) - (root.child('userVotes/'+auth.uid+'/'+$pid).val() === -1 ? 1 : 0))",
+          ".validate": "newData.isNumber() && newData.val() >= 0"
         },
         "createdAt": {
           ".validate": "newData.isNumber() && (newData.val() === now || data.exists() || ((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'admin'))"
@@ -464,7 +472,7 @@
       ],
       "$pid": {
         ".read": "(auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid",
-        ".write": "((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'admin') || (!newData.exists() && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid) || (!data.exists() && newData.exists() && ((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'student') && root.child('freedomWallTerms/'+auth.uid+'/accepted').val() === true && root.child('settings/freedomWall/requireApproval').val() === true && newData.child('status').val() === 'pending' && newData.parent().parent().child('rateLimits').child(auth.uid).child('post').val() === now && newData.parent().parent().child('freedomWallPrivate').child($pid).child('uid').val() === auth.uid)",
+        ".write": "((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'admin') || (!newData.exists() && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid) || (!data.exists() && newData.exists() && ((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'student') && root.child('freedomWallTerms/'+auth.uid+'/accepted').val() === true && root.child('settings/freedomWall/requireApproval').val() === true && newData.child('status').val() === 'pending' && newData.parent().parent().child('rateLimits').child(auth.uid).child('post').val() === now && newData.parent().parent().child('freedomWallPrivate').child($pid).child('uid').val() === auth.uid && newData.parent().parent().child('postQuota').child(auth.uid).child('day').val() === ((now + 28800000) - (now + 28800000) % 86400000) / 86400000 && newData.parent().parent().child('postQuota').child(auth.uid).child('count').val() <= 3 && (root.child('postQuota/'+auth.uid+'/day').val() === ((now + 28800000) - (now + 28800000) % 86400000) / 86400000 ? newData.parent().parent().child('postQuota').child(auth.uid).child('count').val() === root.child('postQuota/'+auth.uid+'/count').val() + 1 : newData.parent().parent().child('postQuota').child(auth.uid).child('count').val() === 1))",
         ".validate": "newData.hasChildren(['authorLabel','anonymous','content','createdAt','expiresAt','status'])",
         "authorLabel": {
           ".validate": "newData.isString() && newData.val().length <= 60 && newData.val().length >= 1 && (((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'admin') || (newData.parent().child('anonymous').val() === true && newData.val() === 'Anonymous') || (newData.parent().child('anonymous').val() === false && newData.val() === root.child('users/'+auth.uid+'/nickname').val()))"
@@ -522,6 +530,31 @@
         },
         "$other": {
           ".validate": false
+        }
+      }
+    },
+    "postQuota": {
+      "$uid": {
+        ".read": "(auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && auth.uid === $uid",
+        ".write": "((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'student') && auth.uid === $uid && (!data.exists() || newData.child('day').val() > data.child('day').val() || (newData.child('day').val() === data.child('day').val() && newData.child('count').val() === data.child('count').val() + 1))",
+        ".validate": "newData.hasChildren(['day','count'])",
+        "day": {
+          ".validate": "newData.isNumber() && newData.val() === ((now + 28800000) - (now + 28800000) % 86400000) / 86400000"
+        },
+        "count": {
+          ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 3"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "userVotes": {
+      "$uid": {
+        ".read": "(auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && auth.uid === $uid",
+        "$pid": {
+          ".write": "((auth != null && root.child('users/'+auth.uid+'/isActive').val() === true) && root.child('users/'+auth.uid+'/role').val() === 'student') && auth.uid === $uid && (!newData.exists() || root.child('freedomWall/'+$pid).exists())",
+          ".validate": "newData.val() === 1 || newData.val() === -1"
         }
       }
     },

@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
+import { Search } from 'lucide-react';
 import { Modal } from '../shared/Modal';
 import { Field } from '../shared/Field';
 import { ErrorBox } from '../shared/States';
@@ -27,6 +28,8 @@ export function SubjectFormModal({ open, onClose, actorUid, professor, professor
   const [slotDays, setSlotDays] = useState<Day[]>([]);
   const [start, setStart] = useState('09:00');
   const [end, setEnd] = useState('10:30');
+  const [q, setQ] = useState('');
+  const shown = useMemo(() => { const t = q.trim().toLowerCase(); const l = (professors ?? []).filter((x) => !t || x.name.toLowerCase().includes(t)); const cur = professors?.find((x) => x.id === profId); return cur && !l.includes(cur) ? [cur, ...l] : l; }, [professors, q, profId]);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -52,7 +55,19 @@ export function SubjectFormModal({ open, onClose, actorUid, professor, professor
           <Field label="Code">{(id) => <input id={id} className="field" value={code} onChange={(e) => setCode(e.target.value)} placeholder="IT101" required />}</Field>
           <Field label="Subject name">{(id) => <input id={id} className="field" value={name} onChange={(e) => setName(e.target.value)} required />}</Field>
         </div>
-        {professors && <Field label="Professor">{(id) => <select id={id} className="field" value={profId} onChange={(e) => setProfId(e.target.value)}>{professors.length === 0 && <option value="">No professor accounts yet</option>}{professors.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>}</Field>}
+        {professors && (
+          <Field label="Professor">{(id) => (
+            <div className="space-y-2">
+              <div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden="true" /><input id={id} type="search" className="field field-icon" placeholder="Search professors by name (Dr., Mr., Ms. …)" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+              <select className="field" size={Math.min(Math.max(shown.length, 2), 6)} aria-label="Professor" value={profId} onChange={(e) => setProfId(e.target.value)}>
+                {professors.length === 0 && <option value="">No professor accounts yet</option>}
+                {professors.length > 0 && shown.length === 0 && <option value="" disabled>No professor matches “{q}”</option>}
+                {shown.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <p className="text-xs text-muted">Selected: <strong>{professors.find((x) => x.id === profId)?.name ?? 'none'}</strong></p>
+            </div>
+          )}</Field>
+        )}
         <Field label="Description (optional)">{(id) => <textarea id={id} className="field min-h-20" value={desc} maxLength={500} onChange={(e) => setDesc(e.target.value)} />}</Field>
         {!existing && (
           <fieldset className="space-y-2 rounded-2xl bg-primary/6 p-3"><legend className="px-1 text-sm font-semibold">Meeting days (optional)</legend>

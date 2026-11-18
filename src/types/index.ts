@@ -112,6 +112,8 @@ export interface WallPost {
   status: 'approved' | 'pending' | 'rejected' | 'hidden';
   flagged?: boolean;
   editedAt?: number;
+  likes?: number;
+  dislikes?: number;
 }
 /** A student on a course roster (subjectMembers/{subjectId}/{uid}). */
 export interface RosterEntry { uid: string; studentId: string; fullName: string; enrolledAt?: number; by?: string }

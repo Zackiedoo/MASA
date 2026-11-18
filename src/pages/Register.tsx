@@ -16,6 +16,7 @@ type Kind = 'professor' | 'organization';
 export default function Register() {
   const { profile, loading, signIn } = useAuth();
   const [kind, setKind] = useState<Kind>('professor');
+  const [title, setTitle] = useState('Dr.');
   const [f, setF] = useState({ loginId: '', fullName: '', contactEmail: '', password: '', confirm: '', orgName: '', orgDescription: '', note: '', website: '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export default function Register() {
     }
     setBusy(true);
     try {
-      await registerAccount({ role: kind, loginId: f.loginId.trim(), fullName: f.fullName.trim(), contactEmail: f.contactEmail.trim(), password: isDemoMode ? DEMO_PASSWORD : f.password,
+      await registerAccount({ role: kind, loginId: f.loginId.trim(), fullName: kind === 'professor' && !/^(mr|mrs|ms|mx|dr|prof|engr|atty|arch)\.?\s/i.test(f.fullName.trim()) ? `${title} ${f.fullName.trim()}` : f.fullName.trim(), contactEmail: f.contactEmail.trim(), password: isDemoMode ? DEMO_PASSWORD : f.password,
         ...(kind === 'organization' ? { orgName: f.orgName.trim(), orgDescription: f.orgDescription.trim() } : {}), note: f.note.trim(), website: f.website });
       await signIn(f.loginId.trim(), isDemoMode ? DEMO_PASSWORD : f.password); // lands on the "waiting for approval" screen
     } catch (x) { setErr(x instanceof Error ? x.message : 'Could not submit your registration.'); }
@@ -57,6 +58,7 @@ export default function Register() {
         </div>
         {err && <ErrorBox message={err} />}
         <form onSubmit={submit} className="space-y-4">
+          {kind === 'professor' && <Field label="Title">{(id) => <select id={id} className="field" value={title} onChange={(e) => setTitle(e.target.value)}>{['Mr.', 'Ms.', 'Mrs.', 'Mx.', 'Dr.', 'Prof.', 'Engr.', 'Atty.', 'Arch.'].map((t) => <option key={t}>{t}</option>)}</select>}</Field>}
           <Field label="Full name">{(id) => <input id={id} className="field" value={f.fullName} onChange={set('fullName')} maxLength={120} required />}</Field>
           {kind === 'organization' && (
             <>

@@ -2,7 +2,7 @@
 // The server NEVER trusts the client's wording: it re-reads what was just written, checks the caller is allowed to have done it,
 // and builds the notification text itself. Body: { type, ... } (see each case).
 import { adminDb, getCaller, HttpError, route } from './_lib/admin.js';
-import { adminUids, pushToAll, pushToUsers } from './_lib/push.js';
+import { adminUids, pushTest, pushToAll, pushToUsers } from './_lib/push.js';
 
 const RECENT = 5 * 60 * 1000;
 const clean = (v: unknown, max = 128) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -85,6 +85,11 @@ export default route(['POST'], async (req, res) => {
       if (!(await once(`report_${caller.uid}`, 30000))) { res.status(200).json({ sent: 0 }); return; }
       const sent = await pushToUsers(await adminUids(), 'admin', { title: 'Freedom Wall report', body: 'A post was reported and needs review.', link: '/admin' });
       res.status(200).json({ sent }); return;
+    }
+    // { type:'test' } — sends a notification to the caller's own devices and says exactly what happened
+    case 'test': {
+      const r = await pushTest(caller.uid, { title: 'MASA test notification', body: 'If you can read this, notifications work on this device.', link: '/settings' });
+      res.status(200).json(r); return;
     }
     default:
       throw new HttpError(400, 'Unknown notification type.');

@@ -58,7 +58,7 @@ export function AppShell() {
           {NAV.map(({ to, label, icon: Icon }) => (
             <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `relative flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors ${isActive ? 'bg-primary text-white shadow-float' : 'text-ink hover:bg-primary/10'}`}>
               <Icon className="h-5 w-5" />{label}
-              {badge(to) > 0 && <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-[11px] font-bold text-deep">{badge(to)}</span>}
+              {badge(to) > 0 && <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-[#ff1f3d] px-1 text-[11px] font-bold text-white shadow-[0_0_0_2px_rgba(255,31,61,.25)]">{badge(to)}</span>}
             </NavLink>
           ))}
         </nav>
@@ -84,7 +84,7 @@ export function AppShell() {
                 {({ isActive }) => (
                   <>
                     {isActive && <motion.span layoutId="nav-pill" className="absolute inset-x-3 top-1 h-0.5 rounded-full bg-gradient-to-r from-primary to-gold" />}
-                    <span className="relative"><Icon className="h-5 w-5" />{badge(to) > 0 && <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[10px] font-bold text-deep">{badge(to)}</span>}</span>
+                    <span className="relative"><Icon className="h-5 w-5" />{badge(to) > 0 && <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-[#ff1f3d] px-1 text-[10px] font-bold text-white">{badge(to)}</span>}</span>
                     {label}
                   </>
                 )}

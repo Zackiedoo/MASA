@@ -13,7 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useValue } from '../hooks/useValue';
 import { useNow } from '../hooks/useNow';
-import { deleteOwnPost, flagPost, hidePost, removePost, revealIdentity } from '../services/freedomWallService';
+import { deleteOwnPost, flagPost, hidePost, removePost, revealIdentity, vote } from '../services/freedomWallService';
 import { can } from '../lib/permissions';
 import { explainError } from '../lib/database';
 import { toList } from '../utils/format';
@@ -27,6 +27,7 @@ function Wall() {
   const isStudent = can(profile, 'wall.post'); // only students may post, report, edit or delete; everyone else is view-only
   const terms = useValue<{ accepted: boolean; version: string }>(uid && isStudent ? `freedomWallTerms/${uid}` : null);
   const myPosts = useValue<Record<string, boolean>>(uid && isStudent ? `userPosts/${uid}` : null);
+  const myVotes = useValue<Record<string, 1 | -1>>(uid && isStudent ? `userVotes/${uid}` : null);
   const setting = useValue<boolean>('settings/freedomWall/requireApproval');
   const posts = useValue<Record<string, Omit<WallPost, 'id'>>>('freedomWall', { limitLast: 200, orderBy: 'createdAt' });
   const reportsRaw = useValue<Record<string, Omit<Report, 'id'>>>(isAdmin ? 'reports' : null);
@@ -57,7 +58,7 @@ function Wall() {
       ) : (
         <div className="space-y-4">
           {list.map((p) => (
-            <PostCard key={p.id} post={p} now={now} isAdmin={isAdmin} isMine={isStudent && mine.has(p.id)} canReport={isStudent} canEdit={isStudent && setting.data !== true} reports={reportsByPost.get(p.id)?.length ?? 0}
+            <PostCard key={p.id} post={p} now={now} isAdmin={isAdmin} isMine={isStudent && mine.has(p.id)} canReport={isStudent} myVote={myVotes.data?.[p.id] ?? 0} onVote={isStudent ? async (c) => { try { await vote(profile.uid, p, myVotes.data?.[p.id] ?? 0, c); } catch (e) { toast(explainError(e), 'error'); } } : undefined} canEdit={isStudent && setting.data !== true} reports={reportsByPost.get(p.id)?.length ?? 0}
               onReport={() => setReporting(p.id)} onEdit={() => setEditing(p)}
               onHide={async () => { if (confirm('Hide this post from the wall? You can restore it later from the moderation tab.')) { try { await hidePost(profile.uid, p); toast('Post hidden.'); } catch (e) { toast(explainError(e), 'error'); } } }}
               onFlag={async () => { try { await flagPost(profile.uid, p, !p.flagged); toast(p.flagged ? 'Flag removed.' : 'Post flagged.'); } catch (e) { toast(explainError(e), 'error'); } }}

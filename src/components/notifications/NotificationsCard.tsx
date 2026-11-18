@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useValue } from '../../hooks/useValue';
 import { patch, explainError } from '../../lib/database';
+import { sendTestNotification } from '../../lib/notifyApi';
 import { disablePush, enablePush, isPushOn, permissionState, pushSupport } from '../../lib/push';
 
 const TOPICS = [
@@ -21,6 +22,7 @@ export function NotificationsCard() {
   const prefs = useValue<Record<string, boolean>>(uid ? `pushPrefs/${uid}` : null);
   const [on, setOn] = useState(() => (uid ? isPushOn(uid) : false));
   const [busy, setBusy] = useState(false);
+  const [testMsg, setTestMsg] = useState<string | null>(null);
   if (!uid) return <p className="text-sm text-muted">Log in to manage notifications.</p>;
 
   async function toggle(next: boolean) {
@@ -30,6 +32,16 @@ export function NotificationsCard() {
       if (next) { await enablePush(uid); setOn(true); toast('Notifications are on for this device.'); }
       else { await disablePush(uid); setOn(false); toast('Notifications are off for this device.'); }
     } catch (e) { toast(e instanceof Error ? e.message : explainError(e), 'error'); } finally { setBusy(false); }
+  }
+
+  async function test() {
+    setBusy(true); setTestMsg(null);
+    try {
+      const r = await sendTestNotification();
+      setTestMsg(r.tokens === 0 ? 'The server has no saved device for your account. Turn notifications off and on again.'
+        : r.sent > 0 ? `Sent to ${r.sent} device${r.sent > 1 ? 's' : ''}. It should appear in a few seconds.`
+        : `The server could not deliver it: ${r.errors.join(' | ') || 'unknown error'}`);
+    } catch (e) { setTestMsg(`Test failed: ${e instanceof Error ? e.message : 'unknown error'}`); } finally { setBusy(false); }
   }
 
   if (support === 'demo') return <p className="text-sm text-muted">Notifications need the real Firebase connection; they are not available in demo mode.</p>;
@@ -64,6 +76,7 @@ export function NotificationsCard() {
               <Toggle checked={prefs.data?.[t.k] !== false} onChange={(v) => void patch({ [`pushPrefs/${uid}/${t.k}`]: v })} label={t.label} />
             </div>
           ))}
+          <div className="space-y-1"><button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => void test()}>Send me a test notification</button>{testMsg && <p className="break-words text-xs text-muted" role="status">{testMsg}</p>}</div>
           <p className="text-xs text-muted">Account decisions (approvals, enrolment) and admin alerts always come through.</p>
         </div>
       )}

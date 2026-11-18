@@ -1,6 +1,6 @@
 // One tiny data-access layer used by every service. In normal mode it talks to Firebase Realtime
 // Database; in DEMO MODE it talks to the local demo store. Services never import Firebase directly.
-import { get, onValue, orderByChild, limitToLast, push, query, ref, serverTimestamp, set, update } from 'firebase/database';
+import { get, increment, onValue, orderByChild, limitToLast, push, query, ref, serverTimestamp, set, update } from 'firebase/database';
 import { firebaseDb, isDemoMode } from './firebase';
 import { buildSeed } from './demoSeed';
 import { demoGet, demoInit, demoKey, demoPatch, demoSet, demoWatch } from './demoStore';
@@ -37,6 +37,12 @@ export async function write(path: string, value: unknown): Promise<void> {
   if (isDemoMode || !firebaseDb) return demoSet(path, value);
   await set(ref(firebaseDb, path), value);
 }
+
+/** Atomic counter change (+n / -n). In demo mode the demo store applies it. */
+export const inc = (n: number): unknown => (isDemoMode ? { __inc: n } : increment(n));
+
+/** Whole days since 1970 in Philippine time (UTC+8): the Freedom Wall daily post allowance resets at 12:00 am there. Matches the security rules. */
+export const manilaDay = (): number => Math.floor((serverNow() + 8 * 3600000) / 86400000);
 
 /** Atomic multi-path update from the database root. `null` deletes a path. */
 export async function patch(updates: Record<string, unknown>): Promise<void> {

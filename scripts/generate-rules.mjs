@@ -26,6 +26,16 @@ const DURATIONS = [3, 6, 12, 24]
   .map((h) => `(newData.val() >= now + ${h * HOURS - 120000} && newData.val() <= now + ${h * HOURS + 120000})`)
   .join(' || ');
 
+// "Today" as a whole number, counting days in Philippine time (UTC+8), so the daily post limit resets at 12:00 am there.
+const TODAY = `((now + 28800000) - (now + 28800000) % 86400000) / 86400000`;
+const MAX_POSTS_PER_DAY = 3;
+// A post may only be created together with a matching bump of the author's postQuota (+1 today, or 1 on a new day, never above the limit).
+const QUOTA = (root) => `${root}.child('postQuota').child(auth.uid).child('day').val() === ${TODAY} && ${root}.child('postQuota').child(auth.uid).child('count').val() <= ${MAX_POSTS_PER_DAY} && (root.child('postQuota/'+auth.uid+'/day').val() === ${TODAY} ? ${root}.child('postQuota').child(auth.uid).child('count').val() === root.child('postQuota/'+auth.uid+'/count').val() + 1 : ${root}.child('postQuota').child(auth.uid).child('count').val() === 1)`;
+// Like / dislike counters may only move in step with the voter's own vote record (userVotes/{uid}/{postId}).
+const VOTE_PREV = `root.child('userVotes/'+auth.uid+'/'+$pid).val()`;
+const VOTE_NEXT = `newData.parent().parent().parent().child('userVotes').child(auth.uid).child($pid).val()`;
+const counter = (v) => `newData.val() === (data.exists() ? data.val() : 0) + ((${VOTE_NEXT} === ${v} ? 1 : 0) - (${VOTE_PREV} === ${v} ? 1 : 0))`;
+
 const rules = {
   rules: {
     // ───────────── Users ─────────────
@@ -263,13 +273,13 @@ const rules = {
       $sid: {
         '.read': staffOrMember('$sid'),
         $slot: {
-          '.write': isAdmin,
+          '.write': adminOrProf('$sid'),
           '.validate': `newData.hasChildren(['day','startTime','endTime','status'])`,
           day: { '.validate': `newData.isString() && newData.val().matches(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/)` },
           startTime: { '.validate': `newData.isString() && newData.val().matches(/^[0-2][0-9]:[0-5][0-9]$/)` },
           endTime: { '.validate': `newData.isString() && newData.val().matches(/^[0-2][0-9]:[0-5][0-9]$/)` },
           room: { '.validate': str(40) },
-          // A professor may ONLY change the status of their own subject's classes (and the audit fields that go with it).
+          // The subject's professor (or an admin) manages that course's meeting times and status.
           status: { '.write': adminOrProf('$sid'), '.validate': `newData.val() === 'green' || newData.val() === 'yellow' || newData.val() === 'red'` },
           updatedBy: { '.write': adminOrProf('$sid'), '.validate': str(128) },
           updatedAt: { '.write': adminOrProf('$sid'), '.validate': 'newData.isNumber()' },
@@ -294,7 +304,7 @@ const rules = {
       '.read': active,
       '.indexOn': ['expiresAt', 'createdAt'],
       $pid: {
-        '.write': `${isAdmin} || (!newData.exists() && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid) || (!data.exists() && newData.exists() && ${isStudent} && root.child('freedomWallTerms/'+auth.uid+'/accepted').val() === true && root.child('settings/freedomWall/requireApproval').val() !== true && newData.child('status').val() === 'approved' && newData.parent().parent().child('rateLimits').child(auth.uid).child('post').val() === now && newData.parent().parent().child('freedomWallPrivate').child($pid).child('uid').val() === auth.uid)`,
+        '.write': `${isAdmin} || (!newData.exists() && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid) || (!data.exists() && newData.exists() && ${isStudent} && root.child('freedomWallTerms/'+auth.uid+'/accepted').val() === true && root.child('settings/freedomWall/requireApproval').val() !== true && newData.child('status').val() === 'approved' && newData.parent().parent().child('rateLimits').child(auth.uid).child('post').val() === now && newData.parent().parent().child('freedomWallPrivate').child($pid).child('uid').val() === auth.uid && ${QUOTA("newData.parent().parent()")})`,
         '.validate': `newData.hasChildren(['authorLabel','anonymous','content','createdAt','expiresAt','status'])`,
         authorLabel: { '.validate': `${str(60, 1)} && (${isAdmin} || (newData.parent().child('anonymous').val() === true && newData.val() === 'Anonymous') || (newData.parent().child('anonymous').val() === false && newData.val() === root.child('users/'+auth.uid+'/nickname').val()))` },
         anonymous: { '.validate': 'newData.isBoolean()' },
@@ -309,6 +319,8 @@ const rules = {
           '.validate': 'newData.val() === now',
         },
         flagged: { '.validate': `newData.isBoolean() && ${isAdmin}` },
+        likes: { '.write': `${isStudent} && ${counter(1)}`, '.validate': 'newData.isNumber() && newData.val() >= 0' },
+        dislikes: { '.write': `${isStudent} && ${counter(-1)}`, '.validate': 'newData.isNumber() && newData.val() >= 0' },
         createdAt: { '.validate': `newData.isNumber() && (newData.val() === now || data.exists() || ${isAdmin})` },
         expiresAt: {
           '.validate': `newData.isNumber() && (${isAdmin} || data.exists() || ${DURATIONS})`,
@@ -322,7 +334,7 @@ const rules = {
       '.indexOn': ['createdAt'],
       $pid: {
         '.read': `${active} && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid`,
-        '.write': `${isAdmin} || (!newData.exists() && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid) || (!data.exists() && newData.exists() && ${isStudent} && root.child('freedomWallTerms/'+auth.uid+'/accepted').val() === true && root.child('settings/freedomWall/requireApproval').val() === true && newData.child('status').val() === 'pending' && newData.parent().parent().child('rateLimits').child(auth.uid).child('post').val() === now && newData.parent().parent().child('freedomWallPrivate').child($pid).child('uid').val() === auth.uid)`,
+        '.write': `${isAdmin} || (!newData.exists() && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid) || (!data.exists() && newData.exists() && ${isStudent} && root.child('freedomWallTerms/'+auth.uid+'/accepted').val() === true && root.child('settings/freedomWall/requireApproval').val() === true && newData.child('status').val() === 'pending' && newData.parent().parent().child('rateLimits').child(auth.uid).child('post').val() === now && newData.parent().parent().child('freedomWallPrivate').child($pid).child('uid').val() === auth.uid && ${QUOTA("newData.parent().parent()")})`,
         '.validate': `newData.hasChildren(['authorLabel','anonymous','content','createdAt','expiresAt','status'])`,
         authorLabel: { '.validate': `${str(60, 1)} && (${isAdmin} || (newData.parent().child('anonymous').val() === true && newData.val() === 'Anonymous') || (newData.parent().child('anonymous').val() === false && newData.val() === root.child('users/'+auth.uid+'/nickname').val()))` },
         anonymous: { '.validate': 'newData.isBoolean()' },
@@ -358,6 +370,24 @@ const rules = {
       },
     },
     // Which Freedom Wall posts are mine (so I can edit/delete them on any device). Private to the owner.
+    // Daily post allowance: { day: <days since 1970, Philippine time>, count }. It can only go up (never reset by the user).
+    postQuota: {
+      $uid: {
+        '.read': `${active} && auth.uid === $uid`,
+        '.write': `${isStudent} && auth.uid === $uid && (!data.exists() || newData.child('day').val() > data.child('day').val() || (newData.child('day').val() === data.child('day').val() && newData.child('count').val() === data.child('count').val() + 1))`,
+        '.validate': `newData.hasChildren(['day','count'])`,
+        day: { '.validate': `newData.isNumber() && newData.val() === ${TODAY}` },
+        count: { '.validate': `newData.isNumber() && newData.val() >= 1 && newData.val() <= ${MAX_POSTS_PER_DAY}` },
+        $other: { '.validate': false },
+      },
+    },
+    // My own votes (1 = like, -1 = dislike). Private to me; nobody can see who voted what.
+    userVotes: {
+      $uid: {
+        '.read': `${active} && auth.uid === $uid`,
+        $pid: { '.write': `${isStudent} && auth.uid === $uid && (!newData.exists() || root.child('freedomWall/'+$pid).exists())`, '.validate': 'newData.val() === 1 || newData.val() === -1' },
+      },
+    },
     userPosts: {
       $uid: {
         '.read': `${active} && (auth.uid === $uid || ${isAdmin})`,

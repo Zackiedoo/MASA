@@ -20,3 +20,13 @@ export function notifyServer(body: NotifyBody): void {
     } catch { /* notifications are best-effort */ }
   })();
 }
+
+/** Settings "Send test": waits for the server and reports how many of this user's devices it reached, with any error. */
+export async function sendTestNotification(): Promise<{ tokens: number; sent: number; errors: string[] }> {
+  const token = await getIdToken();
+  if (!token) throw new Error('You are signed out.');
+  const res = await fetch('/api/notify', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ type: 'test' }) });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((json as { error?: string }).error || `Server error (${res.status}).`);
+  return json as { tokens: number; sent: number; errors: string[] };
+}

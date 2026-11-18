@@ -175,3 +175,13 @@ Setup: nothing extra on Vercel. Deploy the updated database rules (`firebase dep
 * The profanity filter is a tiny starter list.
 * Archived announcements remain technically readable by direct database access (the homepage hides them).
 * No push notifications; unread/pending indicators are in-app only.
+
+## Freedom Wall limits and reactions
+- Each student may publish **3 posts per day**; the allowance resets at **12:00 am Philippine time**. It is enforced by the security rules (`postQuota/{uid}`), not only by the app, so it cannot be bypassed.
+- Posts have **like / dislike** counters. A student's own vote lives in `userVotes/{uid}/{postId}` (private to them) and the counters can only change in step with it.
+- After pulling this update run `firebase deploy --only database` so the new rules take effect.
+
+## Courses
+- The "New subject" window has a **professor search** (matches titles such as Dr. / Mr. / Ms.).
+- A course's **professor can add and remove their own meeting times**; students' weekly schedule follows automatically.
+- Professor sign-up now has a **Title** selector, and nicknames skip the title ("Dr. Ana Cruz" → "Ana").

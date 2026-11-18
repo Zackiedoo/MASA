@@ -9,7 +9,7 @@ import { StatusLegend, StatusPill } from './ScheduleModal';
 import type { Day, ScheduleHistoryEntry, ScheduleSlot, ScheduleStatus, Subject } from '../../types';
 import { Spinner } from '../shared/States';
 
-/** For the subject's professor: change each class's status (green / yellow / red) and see history. Only administrators add or remove meeting times (`canEditSlots`). */
+/** For the subject's professor: change each class's status (green / yellow / red) and see history. Admins and the subject's professor add or remove meeting times (`canEditSlots`). */
 export function ProfessorSchedulePanel({ subject, actorUid, canEditSlots = false }: { subject: Subject; actorUid: string; canEditSlots?: boolean }) {
   const toast = useToast();
   const slotsRaw = useValue<Record<string, Omit<ScheduleSlot, 'id'>>>(`classSchedules/${subject.id}`);
@@ -26,7 +26,7 @@ export function ProfessorSchedulePanel({ subject, actorUid, canEditSlots = false
   return (
     <div className="space-y-4">
       <StatusLegend />
-      {slotsRaw.loading ? <Spinner /> : slots.length === 0 ? <p className="text-sm text-muted">No meeting times yet. An administrator sets them up.</p> : (
+      {slotsRaw.loading ? <Spinner /> : slots.length === 0 ? <p className="text-sm text-muted">No meeting times yet. Add the first one below.</p> : (
         <ul className="space-y-2">
           {slots.map((s) => (
             <li key={s.id} className="space-y-2 rounded-2xl border border-[rgb(var(--line))] bg-bg/60 p-3">
@@ -53,7 +53,7 @@ export function ProfessorSchedulePanel({ subject, actorUid, canEditSlots = false
         <input className="field" type="time" aria-label="End time" value={end} onChange={(e) => setEnd(e.target.value)} required />
         <input className="field" placeholder="Room" aria-label="Room" value={room} maxLength={40} onChange={(e) => setRoom(e.target.value)} />
         <button className="btn btn-primary btn-sm h-full" disabled={end <= start}><Plus className="h-4 w-4" />Add</button>
-      </form> : <p className="rounded-2xl bg-primary/6 p-3 text-xs text-muted">Meeting times are set by an administrator. You can update each class's status above.</p>}
+      </form> : <p className="rounded-2xl bg-primary/6 p-3 text-xs text-muted">Meeting times are set by an administrator.</p>}
       {hist.length > 0 && (
         <details className="rounded-2xl border border-[rgb(var(--line))] p-3 text-sm">
           <summary className="flex cursor-pointer items-center gap-2 font-semibold"><History className="h-4 w-4" />Status history</summary>

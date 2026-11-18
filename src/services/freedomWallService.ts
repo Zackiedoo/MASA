@@ -1,11 +1,18 @@
 import { notifyServer } from '../lib/notifyApi';
-import { newKey, patch, read, serverNow, stamp } from '../lib/database';
+import { inc, manilaDay, newKey, patch, read, serverNow, stamp } from '../lib/database';
 import type { Report, UserProfile, WallIdentity, WallPost } from '../types';
 import { logActivity } from './logService';
 
 export const TERMS_VERSION = '1.0';
 export const DURATIONS = [3, 6, 12, 24] as const;
 const HOUR = 3600000;
+export const MAX_POSTS_PER_DAY = 3;
+
+/** How many posts the student may still make today (resets 12:00 am Philippine time). */
+export async function postsLeftToday(uid: string): Promise<number> {
+  const q = await read<{ day: number; count: number }>(`postQuota/${uid}`).catch(() => null);
+  return q && q.day === manilaDay() ? Math.max(0, MAX_POSTS_PER_DAY - q.count) : MAX_POSTS_PER_DAY;
+}
 
 export async function acceptTerms(uid: string) {
   await patch({ [`freedomWallTerms/${uid}`]: { accepted: true, version: TERMS_VERSION, acceptedAt: stamp() } });
@@ -17,6 +24,10 @@ export async function acceptTerms(uid: string) {
  * One atomic update also stamps the rate-limit marker the Security Rules check.
  */
 export async function createPost(p: UserProfile, content: string, anonymous: boolean, hours: number, requireApproval: boolean) {
+  const q = await read<{ day: number; count: number }>(`postQuota/${p.uid}`).catch(() => null);
+  const day = manilaDay();
+  const used = q && q.day === day ? q.count : 0;
+  if (used >= MAX_POSTS_PER_DAY) throw new Error(`You have used all ${MAX_POSTS_PER_DAY} posts for today. The allowance resets at 12:00 am.`);
   const id = newKey('freedomWall');
   const post = {
     authorLabel: anonymous ? 'Anonymous' : p.nickname,
@@ -30,6 +41,7 @@ export async function createPost(p: UserProfile, content: string, anonymous: boo
     [`${requireApproval ? 'freedomWallQueue' : 'freedomWall'}/${id}`]: post,
     [`freedomWallPrivate/${id}`]: { uid: p.uid, studentId: p.studentId, fullName: p.fullName },
     [`rateLimits/${p.uid}/post`]: stamp(),
+    [`postQuota/${p.uid}`]: { day, count: used + 1 },
   });
   // Lets the author's own posts be recognised (to edit/delete them) without exposing identities. Kept separate so a problem here can never block the post itself.
   await patch({ [`userPosts/${p.uid}/${id}`]: true }).catch(() => undefined);
@@ -114,4 +126,15 @@ export async function revealIdentity(admin: string, postId: string): Promise<Wal
   const ident = await read<WallIdentity>(`freedomWallPrivate/${postId}`);
   await logActivity(admin, 'moderation.reveal_identity', `post ${postId}`);
   return ident;
+}
+
+/** Like (1) or dislike (-1); choosing the same again removes it. Counters move atomically together with my private vote record. */
+export async function vote(uid: string, post: WallPost, mine: 1 | -1 | 0, choice: 1 | -1) {
+  const next = mine === choice ? 0 : choice;
+  const up: Record<string, unknown> = { [`userVotes/${uid}/${post.id}`]: next === 0 ? null : next };
+  if (mine === 1 && next !== 1) up[`freedomWall/${post.id}/likes`] = inc(-1);
+  if (mine === -1 && next !== -1) up[`freedomWall/${post.id}/dislikes`] = inc(-1);
+  if (next === 1) up[`freedomWall/${post.id}/likes`] = inc(1);
+  if (next === -1) up[`freedomWall/${post.id}/dislikes`] = inc(1);
+  await patch(up);
 }

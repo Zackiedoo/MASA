@@ -17,7 +17,13 @@ export function checkPassword(p: string) {
   if (p.length < 8 || !/[A-Za-z]/.test(p) || !/[0-9]/.test(p)) throw new HttpError(400, 'Password must be at least 8 characters with letters and numbers.');
 }
 
-export const nicknameFrom = (fullName: string) => fullName.split(' ')[0].slice(0, 30).padEnd(2, '_');
+const TITLES = /^(mr|mrs|ms|miss|mx|dr|prof|professor|engr|atty|arch|sir|ma'am|maam|rev|fr)\.?$/i;
+/** First word of the name, skipping a leading title such as "Dr." or "Mr.". */
+export const nicknameFrom = (fullName: string) => {
+  const words = fullName.trim().split(/\s+/);
+  while (words.length > 1 && TITLES.test(words[0])) words.shift();
+  return words[0].slice(0, 30).padEnd(2, '_');
+};
 
 /** Student ID → uid lookup that lets a professor enroll an existing student (see /studentIndex rules). */
 export async function indexStudent(loginId: string, uid: string, fullName: string) {
