@@ -1,6 +1,6 @@
 import { notifyServer } from '../lib/notifyApi';
 import { inc, manilaDay, newKey, patch, read, serverNow, stamp } from '../lib/database';
-import type { Report, UserProfile, WallIdentity, WallPost } from '../types';
+import type { Report, UserProfile, WallPost } from '../types';
 import { logActivity } from './logService';
 
 export const TERMS_VERSION = '1.0';
@@ -87,13 +87,12 @@ export async function rejectQueued(admin: string, post: WallPost) {
   await logActivity(admin, 'moderation.reject', `post ${post.id}`);
 }
 
+/** Admin removes a post (no identity is looked up; use "Uphold report" to penalise the author). */
 export async function removePost(admin: string, post: WallPost, reports: Report[]) {
-  const ident = await read<WallIdentity>(`freedomWallPrivate/${post.id}`);
   const updates: Record<string, unknown> = { [`freedomWall/${post.id}`]: null, [`freedomWallQueue/${post.id}`]: null };
-  if (ident?.uid) updates[`userPosts/${ident.uid}/${post.id}`] = null;
   for (const r of reports) updates[`reports/${r.id}/status`] = 'actioned';
   await patch(updates);
-  await logActivity(admin, 'moderation.remove', `post ${post.id} (author ${ident?.studentId ?? 'unknown'})`);
+  await logActivity(admin, 'moderation.remove', `post ${post.id}`);
 }
 
 /** Temporarily hides a post from the wall (reversible), keeping its identity record. Admin only. */
@@ -114,18 +113,6 @@ export async function unhidePost(admin: string, post: WallPost) {
 export async function flagPost(admin: string, post: WallPost, flagged: boolean) {
   await patch({ [`freedomWall/${post.id}/flagged`]: flagged ? true : null });
   await logActivity(admin, flagged ? 'moderation.flag' : 'moderation.unflag', `post ${post.id}`);
-}
-
-export async function dismissReport(admin: string, r: Report) {
-  await patch({ [`reports/${r.id}/status`]: 'dismissed' });
-  await logActivity(admin, 'moderation.dismiss_report', `post ${r.postId}`);
-}
-
-/** Reveals who wrote a post. Every reveal is written to the audit log. */
-export async function revealIdentity(admin: string, postId: string): Promise<WallIdentity | null> {
-  const ident = await read<WallIdentity>(`freedomWallPrivate/${postId}`);
-  await logActivity(admin, 'moderation.reveal_identity', `post ${postId}`);
-  return ident;
 }
 
 /** Like (1) or dislike (-1); choosing the same again removes it. Counters move atomically together with my private vote record. */

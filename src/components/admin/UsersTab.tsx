@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { KeyRound, Pencil, Plus, Search, ShieldOff, ShieldCheck, Trash2, UserCog, Users } from 'lucide-react';
+import { Gavel, KeyRound, Pencil, Plus, Search, ShieldOff, ShieldCheck, Trash2, UserCog, Users } from 'lucide-react';
 import { useValue } from '../../hooks/useValue';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -11,6 +11,7 @@ import { cleanText, isLoginId } from '../../utils/validation';
 import { Modal } from '../shared/Modal';
 import { Field, Segmented } from '../shared/Field';
 import { Badge, Empty, ErrorBox, Spinner } from '../shared/States';
+import { ViolationsModal } from './ViolationsModal';
 import { CredentialsModal, type Credential } from './CredentialsModal';
 import type { Organization, ResetRequest, Role, UserProfile } from '../../types';
 
@@ -28,6 +29,8 @@ export function UsersTab() {
   const [q, setQ] = useState('');
   const [creating, setCreating] = useState(false);
   const [roleFor, setRoleFor] = useState<UserProfile | null>(null);
+  const violations = useValue<Record<string, Record<string, unknown>>>('violations');
+  const [vioFor, setVioFor] = useState<UserProfile | null>(null);
   const [editFor, setEditFor] = useState<UserProfile | null>(null);
   const [creds, setCreds] = useState<Credential[] | null>(null);
   const orgList = useMemo(() => toList<Organization>(orgs.data), [orgs.data]);
@@ -80,8 +83,10 @@ export function UsersTab() {
             <li key={u.uid} className="glass card flex flex-wrap items-center gap-3 p-4">
               <div className="min-w-0 flex-1"><p className="truncate font-bold">{u.fullName}</p><p className="truncate text-xs text-muted">ID {u.studentId}{u.orgId ? ` · ${orgs.data?.[u.orgId]?.name ?? 'org'}` : ''}</p></div>
               <Badge tone="maroon"><span className="capitalize">{u.role}</span></Badge>
+              {Object.keys(violations.data?.[u.uid] ?? {}).length > 0 && <Badge tone="bad"><Gavel className="h-3 w-3" />{Object.keys(violations.data?.[u.uid] ?? {}).length} violation{Object.keys(violations.data?.[u.uid] ?? {}).length > 1 ? 's' : ''}</Badge>}
               {u.approvalStatus === 'pending' ? <Badge tone="warn">Awaiting approval</Badge> : u.approvalStatus === 'rejected' ? <Badge tone="bad">Rejected</Badge> : <Badge tone={u.isActive ? 'ok' : 'bad'}>{u.isActive ? 'Active' : 'Disabled'}</Badge>}
               <div className="flex gap-1">
+                <button className="btn btn-ghost btn-sm" title="See violations" aria-label="See violations" onClick={() => setVioFor(u)}><Gavel className="h-3.5 w-3.5" /></button>
                 <button className="btn btn-ghost btn-sm" title="Edit name / ID" aria-label="Edit user" onClick={() => setEditFor(u)}><Pencil className="h-3.5 w-3.5" /></button>
                 <button className="btn btn-ghost btn-sm" title="Reset password" aria-label="Reset password" onClick={() => reset(u)}><KeyRound className="h-3.5 w-3.5" /></button>
                 <button className="btn btn-ghost btn-sm" title="Change role" aria-label="Change role" disabled={u.uid === uid || !!u.approvalStatus && u.approvalStatus !== 'approved'} onClick={() => setRoleFor(u)}><UserCog className="h-3.5 w-3.5" /></button>
@@ -92,6 +97,7 @@ export function UsersTab() {
           ))}
         </ul>
       )}
+      {vioFor && <ViolationsModal user={vioFor} onClose={() => setVioFor(null)} />}
       {creating && <CreateModal orgs={orgList} existing={byLoginId} onClose={() => setCreating(false)} onCreds={setCreds} />}
       {editFor && <EditModal key={editFor.uid} user={editFor} onClose={() => setEditFor(null)} />}
       {roleFor && <RoleModal user={roleFor} orgs={orgList} onClose={() => setRoleFor(null)} />}

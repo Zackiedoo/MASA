@@ -127,3 +127,13 @@ export interface UserSettings { theme: ThemeName; fontSize: FontSize; reduceMoti
 export interface ActivityLog { id: string; actorId: string; action: string; target: string; createdAt: number }
 export interface ResetRequest { studentId: string; requestedAt: number; status: 'open' | 'resolved' }
 export interface SystemSettings { termsVersion?: string; freedomWall?: { requireApproval?: boolean } }
+
+// ───── inbox, violations, mutes, appeals ─────
+export type InboxKind = 'violation' | 'mute' | 'appeal' | 'report' | 'account' | 'request' | 'schedule' | 'update';
+export interface InboxItem { id: string; kind: InboxKind; title: string; body: string; createdAt: number; read?: boolean; link?: string }
+export type PenaltyLevel = 'warning' | '24h' | '3d' | '7d' | 'permanent';
+export interface MuteRecord { until: number; level: Exclude<PenaltyLevel, 'warning'>; since: number; offence: number }
+export interface Violation { id: string; source: 'wall' | 'chat'; ref: string; excerpt: string; reportCount: number; decidedBy: string; at: number; offence: number; penalty: PenaltyLevel }
+export interface Appeal { reason: string; createdAt: number; status: 'pending' | 'approved' | 'denied'; decidedAt?: number; decidedBy?: string; response?: string; nextAllowedAt?: number }
+export interface MessageReport { id: string; subjectId: string; subjectCode: string; messageId: string; reporterId: string; reason: string; createdAt: number; status: 'open' | 'dismissed' | 'actioned'; snapshot: { senderId: string; senderName: string; content: string; createdAt: number }; context?: Array<{ senderName: string; content: string; createdAt: number }> }
+export interface AuthorReveal { uid: string; studentId: string; fullName: string; offence: number; penalty: PenaltyLevel; until: number | null }

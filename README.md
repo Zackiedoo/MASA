@@ -185,3 +185,13 @@ Setup: nothing extra on Vercel. Deploy the updated database rules (`firebase dep
 - The "New subject" window has a **professor search** (matches titles such as Dr. / Mr. / Ms.).
 - A course's **professor can add and remove their own meeting times**; students' weekly schedule follows automatically.
 - Professor sign-up now has a **Title** selector, and nicknames skip the title ("Dr. Ana Cruz" → "Ana").
+
+## Anonymity, violations, appeals and the inbox
+- **Anonymous means anonymous.** The identity behind a Freedom Wall post is stored where *nobody* can read it from the app, administrators included. The server reads it only when an administrator **upholds a report** (Admin → Freedom Wall → Reported → *Uphold & penalise*); the author then appears in that account's violation history.
+- **Offence ladder** (for upheld violations): 1st = written warning · 2nd = 24-hour mute · 3rd = 3-day mute · 4th = 7-day mute · 5th and beyond = permanent mute. A mute blocks Freedom Wall posting and chat messages (enforced by the security rules). Admins can lift a mute early (Users → ⚖ icon).
+- **Appeals** are for permanent mutes: Profile → Inbox. One appeal at a time; if denied, the next one is allowed after 30 days. Admins decide in Admin → Appeals. Approval restores privileges and the next violation becomes a 7-day mute.
+- **Violation history** is hidden from the user's own profile page (they get an inbox message each time). Admins see it with the ⚖ button in the user list.
+- **Inbox** (Profile → Inbox, red dot on the Profile tab when unread): report outcomes (reporters are told whether their report was upheld), warnings and mutes, appeal decisions, join-request decisions, registration approval, password resets, role changes, and admin messages. Admins send updates from Admin → Inbox messages (pick an audience).
+- **Group chats are private.** Administrators cannot read them. Any member can report a message; the server copies only that message plus a few lines before it. Admins review it in Admin → Freedom Wall → Chat reports. A course's professor can delete messages in their own group.
+- After updating: `firebase deploy --only database`, redeploy to Vercel (new API files: `api/admin/moderate.ts`, `api/report-message.ts`).
+- Honest limit: someone with owner access to the Firebase project can read the raw database. The app itself cannot.

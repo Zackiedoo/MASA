@@ -36,6 +36,9 @@ const VOTE_PREV = `root.child('userVotes/'+auth.uid+'/'+$pid).val()`;
 const VOTE_NEXT = `newData.parent().parent().parent().child('userVotes').child(auth.uid).child($pid).val()`;
 const counter = (v) => `newData.val() === (data.exists() ? data.val() : 0) + ((${VOTE_NEXT} === ${v} ? 1 : 0) - (${VOTE_PREV} === ${v} ? 1 : 0))`;
 
+// A user under an upheld-violation mute cannot post to the Freedom Wall or send chat messages until `until` passes.
+const notMuted = `(!root.child('mutes/'+auth.uid).exists() || root.child('mutes/'+auth.uid+'/until').val() < now)`;
+
 const rules = {
   rules: {
     // ───────────── Users ─────────────
@@ -221,10 +224,11 @@ const rules = {
     // ───────────── Group chat & class updates (members only) ─────────────
     messages: {
       $sid: {
-        '.read': staffOrMember('$sid'),
+        // PRIVACY: administrators cannot read group chats. They only ever see a reported message (a snapshot taken by the server).
+        '.read': `${memberOf('$sid')} || ${profOf('$sid')}`,
         '.indexOn': ['createdAt'],
         $mid: {
-          '.write': `(!data.exists() && newData.exists() && (${memberOf('$sid')} || ${profOf('$sid')})) || (!newData.exists() && ${adminOrProf('$sid')})`,
+          '.write': `(!data.exists() && newData.exists() && (${memberOf('$sid')} || ${profOf('$sid')}) && ${notMuted}) || (!newData.exists() && ${profOf('$sid')})`,
           '.validate': `newData.hasChildren(['senderId','senderName','content','createdAt','messageType']) && newData.child('senderId').val() === auth.uid`,
           senderId: { '.validate': str(128, 1) },
           senderName: { '.validate': str(120, 1) },
@@ -299,12 +303,12 @@ const rules = {
     // ───────────── Freedom Wall ─────────────
     // /freedomWall            → approved, public-to-members posts (NO identity in here)
     // /freedomWallQueue       → posts waiting for moderation (admins only)
-    // /freedomWallPrivate     → real identity behind every post (admins only)
+    // /freedomWallPrivate     → real identity behind every post (server only: revealed to admins only when a report is upheld)
     freedomWall: {
       '.read': active,
       '.indexOn': ['expiresAt', 'createdAt'],
       $pid: {
-        '.write': `${isAdmin} || (!newData.exists() && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid) || (!data.exists() && newData.exists() && ${isStudent} && root.child('freedomWallTerms/'+auth.uid+'/accepted').val() === true && root.child('settings/freedomWall/requireApproval').val() !== true && newData.child('status').val() === 'approved' && newData.parent().parent().child('rateLimits').child(auth.uid).child('post').val() === now && newData.parent().parent().child('freedomWallPrivate').child($pid).child('uid').val() === auth.uid && ${QUOTA("newData.parent().parent()")})`,
+        '.write': `${isAdmin} || (!newData.exists() && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid) || (!data.exists() && newData.exists() && ${isStudent} && ${notMuted} && root.child('freedomWallTerms/'+auth.uid+'/accepted').val() === true && root.child('settings/freedomWall/requireApproval').val() !== true && newData.child('status').val() === 'approved' && newData.parent().parent().child('rateLimits').child(auth.uid).child('post').val() === now && newData.parent().parent().child('freedomWallPrivate').child($pid).child('uid').val() === auth.uid && ${QUOTA("newData.parent().parent()")})`,
         '.validate': `newData.hasChildren(['authorLabel','anonymous','content','createdAt','expiresAt','status'])`,
         authorLabel: { '.validate': `${str(60, 1)} && (${isAdmin} || (newData.parent().child('anonymous').val() === true && newData.val() === 'Anonymous') || (newData.parent().child('anonymous').val() === false && newData.val() === root.child('users/'+auth.uid+'/nickname').val()))` },
         anonymous: { '.validate': 'newData.isBoolean()' },
@@ -334,7 +338,7 @@ const rules = {
       '.indexOn': ['createdAt'],
       $pid: {
         '.read': `${active} && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid`,
-        '.write': `${isAdmin} || (!newData.exists() && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid) || (!data.exists() && newData.exists() && ${isStudent} && root.child('freedomWallTerms/'+auth.uid+'/accepted').val() === true && root.child('settings/freedomWall/requireApproval').val() === true && newData.child('status').val() === 'pending' && newData.parent().parent().child('rateLimits').child(auth.uid).child('post').val() === now && newData.parent().parent().child('freedomWallPrivate').child($pid).child('uid').val() === auth.uid && ${QUOTA("newData.parent().parent()")})`,
+        '.write': `${isAdmin} || (!newData.exists() && root.child('freedomWallPrivate/'+$pid+'/uid').val() === auth.uid) || (!data.exists() && newData.exists() && ${isStudent} && ${notMuted} && root.child('freedomWallTerms/'+auth.uid+'/accepted').val() === true && root.child('settings/freedomWall/requireApproval').val() === true && newData.child('status').val() === 'pending' && newData.parent().parent().child('rateLimits').child(auth.uid).child('post').val() === now && newData.parent().parent().child('freedomWallPrivate').child($pid).child('uid').val() === auth.uid && ${QUOTA("newData.parent().parent()")})`,
         '.validate': `newData.hasChildren(['authorLabel','anonymous','content','createdAt','expiresAt','status'])`,
         authorLabel: { '.validate': `${str(60, 1)} && (${isAdmin} || (newData.parent().child('anonymous').val() === true && newData.val() === 'Anonymous') || (newData.parent().child('anonymous').val() === false && newData.val() === root.child('users/'+auth.uid+'/nickname').val()))` },
         anonymous: { '.validate': 'newData.isBoolean()' },
@@ -349,9 +353,10 @@ const rules = {
         $other: { '.validate': false },
       },
     },
+    // Nobody can read this from the app (not even administrators). Only the server reads it, and only when a report is upheld.
     freedomWallPrivate: {
-      '.read': isAdmin,
-      '.write': isAdmin,
+      '.read': false,
+      '.write': false,
       $pid: {
         '.write': `(!data.exists() && newData.exists() && ${isStudent} && newData.child('uid').val() === auth.uid) || (!newData.exists() && data.child('uid').val() === auth.uid)`,
         '.validate': `newData.hasChildren(['uid','studentId','fullName']) && newData.child('studentId').val() === root.child('users/'+newData.child('uid').val()+'/studentId').val() && newData.child('fullName').val() === root.child('users/'+newData.child('uid').val()+'/fullName').val()`,
@@ -388,6 +393,36 @@ const rules = {
         $pid: { '.write': `${isStudent} && auth.uid === $uid && (!newData.exists() || root.child('freedomWall/'+$pid).exists())`, '.validate': 'newData.val() === 1 || newData.val() === -1' },
       },
     },
+    // ───────────── Violations, mutes, appeals, inbox (written by the server; users read their own) ─────────────
+    violations: { $uid: { '.read': `${isAdmin} || (${active} && auth.uid === $uid)` } },
+    mutes: { $uid: { '.read': `${isAdmin} || (${active} && auth.uid === $uid)` } },
+    appeals: {
+      '.read': isAdmin,
+      '.indexOn': ['status'],
+      $uid: {
+        '.read': `${active} && auth.uid === $uid`,
+        // One appeal at a time. Allowed only while permanently muted, and again only after the "next allowed" date of a denied one.
+        '.write': `${active} && auth.uid === $uid && newData.exists() && root.child('mutes/'+$uid+'/level').val() === 'permanent' && (!data.exists() || (data.child('status').val() !== 'pending' && data.child('nextAllowedAt').val() < now))`,
+        '.validate': `newData.hasChildren(['reason','createdAt','status']) && newData.child('status').val() === 'pending'`,
+        reason: { '.validate': str(1000, 10) },
+        createdAt: { '.validate': 'newData.val() === now' },
+        status: { '.validate': true },
+        $other: { '.validate': false },
+      },
+    },
+    inbox: {
+      $uid: {
+        '.read': `auth != null && auth.uid === $uid`,
+        '.indexOn': ['createdAt'],
+        $iid: {
+          // the owner may only mark as read or delete; every message itself is written by the server
+          read: { '.write': `auth != null && auth.uid === $uid && data.parent().exists()`, '.validate': 'newData.isBoolean()' },
+          '.write': `auth != null && auth.uid === $uid && !newData.exists()`,
+        },
+      },
+    },
+    broadcasts: { '.read': isAdmin, '.indexOn': ['createdAt'] },
+    messageReports: { '.read': isAdmin, '.indexOn': ['status'] },
     userPosts: {
       $uid: {
         '.read': `${active} && (auth.uid === $uid || ${isAdmin})`,

@@ -3,6 +3,7 @@
 // and builds the notification text itself. Body: { type, ... } (see each case).
 import { adminDb, getCaller, HttpError, route } from './_lib/admin.js';
 import { adminUids, pushTest, pushToAll, pushToUsers } from './_lib/push.js';
+import { deliver } from './_lib/inbox.js';
 
 const RECENT = 5 * 60 * 1000;
 const clean = (v: unknown, max = 128) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -75,8 +76,8 @@ export default route(['POST'], async (req, res) => {
       const sid = clean(b.subjectId); const studentUid = clean(b.studentUid);
       const s = await subjectAsStaff(sid);
       const status = (await db.ref(`userSubjects/${studentUid}/${sid}`).get()).val();
-      if (status === 'approved') await pushToUsers([studentUid], 'account', { title: `You're enrolled in ${s.subjectCode}`, body: s.subjectName, link: `/messages/${sid}` });
-      else if (status === 'rejected') await pushToUsers([studentUid], 'account', { title: `Join request declined`, body: `Your request to join ${s.subjectCode} was not approved.`, link: '/messages' });
+      if (status === 'approved') await deliver([studentUid], { kind: 'request', title: `You're enrolled in ${s.subjectCode}`, body: s.subjectName, link: `/messages/${sid}` });
+      else if (status === 'rejected') await deliver([studentUid], { kind: 'request', title: 'Join request declined', body: `Your request to join ${s.subjectCode} was not approved.`, link: '/messages' });
       res.status(200).json({ ok: true }); return;
     }
     // { type:'report' } — a student reported a Freedom Wall post → administrators

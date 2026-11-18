@@ -1,7 +1,7 @@
 // POST /api/admin/users — account management. ADMINISTRATORS ONLY (checked server-side on every call).
 // Body: { action: 'create' | 'update' | 'delete' | 'resetPassword' | 'setRole' | 'setActive' | 'approve' | 'reject' | 'reindex', ... }
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { pushToUsers } from '../_lib/push.js';
+import { deliver } from '../_lib/inbox.js';
 import { adminAuth, adminDb, HttpError, loginIdToEmail, LOGIN_ID_PATTERN, logActivity, requireAdmin, route } from '../_lib/admin.js';
 import { AVATARS, ROLES, checkPassword, clean, indexStudent, nicknameFrom, tempPassword, unindexStudent } from '../_lib/accounts.js';
 import { randomInt } from 'node:crypto';
@@ -120,6 +120,7 @@ export default route(['POST'], async (req: VercelRequest, res: VercelResponse) =
       await db.ref(`users/${uid}/mustChangePassword`).set(true);
       await db.ref(`resetRequests/${u.studentId}`).update({ status: 'resolved' }).catch(() => undefined);
       await logActivity(caller.uid, 'account.reset_password', `${u.role}:${u.studentId}`);
+      await deliver([uid], { kind: 'account', title: 'Your password was reset', body: 'An administrator reset your password after your request. Log in with the temporary password you were given, then choose a new one. If you did not ask for this, tell an administrator.' });
       res.status(200).json({ uid, tempPassword: b.password ? undefined : password });
       return;
     }
@@ -146,6 +147,7 @@ export default route(['POST'], async (req: VercelRequest, res: VercelResponse) =
       if (role === 'student' && u.role !== 'student') await indexStudent(u.studentId, uid, u.fullName);
       await auth.revokeRefreshTokens(uid); // force a fresh token carrying the new claims
       await logActivity(caller.uid, 'account.role_change', `${u.studentId}: ${u.role} → ${role}`);
+      await deliver([uid], { kind: 'account', title: 'Your account role changed', body: `An administrator changed your role from ${u.role} to ${role}. Log in again to see the update.` });
       res.status(200).json({ uid });
       return;
     }
@@ -187,7 +189,7 @@ export default route(['POST'], async (req: VercelRequest, res: VercelResponse) =
       await db.ref(`users/${uid}`).update({ isActive: true, approvalStatus: 'approved', rejectionReason: null, ...(orgId ? { orgId } : {}) });
       await auth.revokeRefreshTokens(uid); // so their next login carries the new role claims
       await logActivity(caller.uid, 'account.approve', `${u.role}:${u.studentId}`);
-      await pushToUsers([uid], 'account', { title: 'Your MASA account is approved', body: 'You can now log in and use MASA.', link: '/login' }, { allowInactive: true }).catch(() => undefined);
+      await deliver([uid], { kind: 'account', title: 'Your MASA account is approved', body: 'Your registration was approved. You can now log in and use MASA.', link: '/login' }, 'account', { allowInactive: true });
       res.status(200).json({ uid });
       return;
     }
@@ -199,7 +201,7 @@ export default route(['POST'], async (req: VercelRequest, res: VercelResponse) =
       if (u.approvalStatus !== 'pending') throw new HttpError(409, 'This account is not awaiting approval.');
       await db.ref(`users/${uid}`).update({ isActive: false, approvalStatus: 'rejected', rejectionReason: clean(b.reason, 300) || null });
       await logActivity(caller.uid, 'account.reject', `${u.role}:${u.studentId}`);
-      await pushToUsers([uid], 'account', { title: 'MASA registration update', body: 'Your registration was not approved. Open MASA for details.', link: '/login' }, { allowInactive: true }).catch(() => undefined);
+      await deliver([uid], { kind: 'account', title: 'MASA registration update', body: 'Your registration was not approved. Open MASA for details.', link: '/login' }, 'account', { allowInactive: true });
       res.status(200).json({ uid });
       return;
     }

@@ -5,7 +5,7 @@ import { isDemoMode } from './firebase';
 import { demoGet, demoKey, demoPatch } from './demoStore';
 import type { Role } from '../types';
 
-async function call<T>(url: string, body: unknown): Promise<T> {
+export async function call<T>(url: string, body: unknown): Promise<T> {
   const token = await getIdToken();
   if (!token) throw new Error('You are signed out.');
   let res: Response;
@@ -32,7 +32,7 @@ export type UserAction =
 
 const AVATARS = ['fox', 'panda', 'owl', 'cat', 'koala', 'frog'];
 const demoTemp = () => Array.from({ length: 10 }, () => 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 31)]).join('');
-const nick = (n: string) => (n.split(' ')[0] || 'User').padEnd(2, '_');
+const nick = (n: string) => (n.trim().split(/\s+/).filter((w, i, a) => !(i < a.length - 1 && /^(mr|mrs|ms|mx|dr|prof|engr|atty|arch)\.?$/i.test(w)))[0] || 'User').padEnd(2, '_');
 
 export interface RegisterInput { role: 'professor' | 'organization'; loginId: string; fullName: string; contactEmail: string; password: string; orgName?: string; orgDescription?: string; note?: string; website?: string }
 

@@ -67,7 +67,7 @@ export default function Register() {
             </>
           )}
           <Field label="Contact e-mail" hint="Used by the administrator to verify who you are. It is not shown to other users.">{(id) => <input id={id} className="field" type="email" value={f.contactEmail} onChange={set('contactEmail')} autoComplete="email" required />}</Field>
-          <Field label="Username" hint="You will log in with this. 3–20 letters, numbers or dashes.">{(id) => <input id={id} className="field" value={f.loginId} onChange={set('loginId')} autoCapitalize="none" spellCheck={false} autoComplete="username" required />}</Field>
+          <Field label="User ID" hint="You will log in with this. 3–20 letters, numbers or dashes.">{(id) => <input id={id} className="field" value={f.loginId} onChange={set('loginId')} autoCapitalize="none" spellCheck={false} autoComplete="username" required />}</Field>
           {isDemoMode ? (
             <p className="rounded-2xl border border-gold/40 bg-softgold/30 p-3 text-xs">Demo mode: every account uses the password <code>{DEMO_PASSWORD}</code>.</p>
           ) : (

@@ -9,6 +9,8 @@ import { PushBridge } from '../notifications/PushBridge';
 import { BannerCtx, PageHeader } from './PageHeader';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { useSubjects } from '../../contexts/SubjectsContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useValue } from '../../hooks/useValue';
 import { MAIN_TABS, tabIndexFor, useSwipeNav } from '../../hooks/useSwipeNav';
 
 // Exactly four primary sections.
@@ -32,6 +34,9 @@ export function AppShell() {
   const bannerCtx = useMemo(() => ({ claim }), [claim]);
   const { pathname } = useLocation();
   const { unreadCount, pendingCount } = useSubjects();
+  const { uid } = useAuth();
+  const inboxRaw = useValue<Record<string, { read?: boolean }>>(uid ? `inbox/${uid}` : null, { limitLast: 100, orderBy: 'createdAt' });
+  const inboxUnread = Object.values(inboxRaw.data ?? {}).filter((i) => i.read !== true).length;
   const prevIdx = useRef(0);
   const dir = useRef(1);
   const idx = tabIndexFor(pathname);
@@ -41,7 +46,7 @@ export function AppShell() {
   const openMenu = useCallback(() => setMenu(true), []);
   const ctx = useMemo(() => ({ openMenu }), [openMenu]);
   const wide = pathname.startsWith('/admin');
-  const badge = (to: string) => (to === '/messages' ? unreadCount + pendingCount : 0);
+  const badge = (to: string) => (to === '/messages' ? unreadCount + pendingCount : to === '/profile' ? inboxUnread : 0);
   const section = pathname === '/' ? 'home' : pathname.split('/')[1];
 
   return (

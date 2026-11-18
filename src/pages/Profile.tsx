@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Pencil, Settings as Cog, LayoutDashboard, Megaphone, IdCard } from 'lucide-react';
+import { Segmented } from '../components/shared/Field';
+import { InboxPanel } from '../components/profile/InboxPanel';
+import { useValue } from '../hooks/useValue';
 import { AuthGate } from '../components/shared/AuthGate';
 import { PageHeader } from '../components/navigation/PageHeader';
 import { ProfileAvatar } from '../components/shared/Avatar';
@@ -10,7 +13,10 @@ import { Badge } from '../components/shared/States';
 import { ROLE_LABEL } from '../lib/permissions';
 
 function ProfileView() {
-  const { profile, role } = useAuth();
+  const { profile, role, uid } = useAuth();
+  const [tab, setTab] = useState<'me' | 'inbox'>('me');
+  const inbox = useValue<Record<string, { read?: boolean }>>(uid ? `inbox/${uid}` : null, { limitLast: 100, orderBy: 'createdAt' });
+  const unread = Object.values(inbox.data ?? {}).filter((i) => i.read !== true).length;
   const [edit, setEdit] = useState(false);
   if (!profile) return null;
   return (
@@ -20,6 +26,8 @@ function ProfileView() {
         title="PROFILE"
         right={<button className="btn btn-ghost btn-icon btn-sm" onClick={() => setEdit(true)} aria-label="Edit profile"><Pencil className="h-5 w-5" /></button>}
       />
+      <div className="mb-4"><Segmented label="Profile sections" value={tab} onChange={setTab} options={[{ value: 'me', label: 'Profile' }, { value: 'inbox', label: unread ? `Inbox (${unread})` : 'Inbox' }]} /></div>
+      {tab === 'inbox' ? <InboxPanel /> : (<>
       <section className="glass card flex flex-col items-center gap-3 px-6 py-8 text-center">
         <ProfileAvatar avatar={profile.avatar} color={profile.avatarColor} size={104} />
         <div>
@@ -38,6 +46,7 @@ function ProfileView() {
           {role === 'admin' && <Link to="/admin" className="glass card flex items-center gap-3 p-4 text-sm font-semibold"><LayoutDashboard className="h-5 w-5 text-primary" />Administrator dashboard</Link>}
         </div>
       )}
+      </>)}
       {edit && <EditProfileModal key={profile.uid + profile.nickname} open={edit} onClose={() => setEdit(false)} profile={profile} />}
     </>
   );

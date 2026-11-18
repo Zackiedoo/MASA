@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { BookOpen, Building2, Flag, LayoutDashboard, Megaphone, ScrollText, Settings2, UserCheck, Users } from 'lucide-react';
+import { BookOpen, Building2, FileCheck2, Flag, Mail, LayoutDashboard, Megaphone, ScrollText, Settings2, UserCheck, Users } from 'lucide-react';
 import { AuthGate } from '../components/shared/AuthGate';
 import { PageHeader } from '../components/navigation/PageHeader';
 import { Overview } from '../components/admin/Overview';
@@ -10,6 +10,8 @@ import { AnnouncementsTab } from '../components/admin/AnnouncementsTab';
 import { ModerationTab } from '../components/admin/ModerationTab';
 import { SubjectsTab } from '../components/admin/SubjectsTab';
 import { LogsTab } from '../components/admin/LogsTab';
+import { AppealsTab } from '../components/admin/AppealsTab';
+import { BroadcastTab } from '../components/admin/BroadcastTab';
 import { SettingsTab } from '../components/admin/SettingsTab';
 
 const TABS: Array<{ id: string; label: string; icon: typeof Users }> = [
@@ -19,6 +21,8 @@ const TABS: Array<{ id: string; label: string; icon: typeof Users }> = [
   { id: 'orgs', label: 'Organizations', icon: Building2 },
   { id: 'announcements', label: 'Announcements', icon: Megaphone },
   { id: 'moderation', label: 'Freedom Wall', icon: Flag },
+  { id: 'appeals', label: 'Appeals', icon: FileCheck2 },
+  { id: 'broadcast', label: 'Inbox messages', icon: Mail },
   { id: 'subjects', label: 'Subjects', icon: BookOpen },
   { id: 'logs', label: 'Activity logs', icon: ScrollText },
   { id: 'settings', label: 'Settings', icon: Settings2 },
@@ -28,7 +32,7 @@ function Dashboard() {
   const [tab, setTab] = useState('overview');
   const body: Record<string, ReactNode> = {
     overview: <Overview goto={setTab} />, approvals: <ApprovalsTab />, users: <UsersTab />, orgs: <OrgsTab />, announcements: <AnnouncementsTab />,
-    moderation: <ModerationTab />, subjects: <SubjectsTab />, logs: <LogsTab />, settings: <SettingsTab />,
+    moderation: <ModerationTab />, appeals: <AppealsTab />, broadcast: <BroadcastTab />, subjects: <SubjectsTab />, logs: <LogsTab />, settings: <SettingsTab />,
   };
   return (
     <>

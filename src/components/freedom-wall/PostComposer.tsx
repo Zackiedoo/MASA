@@ -47,7 +47,7 @@ export function PostComposer({ open, onClose, profile, requireApproval }: { open
           <div className="flex items-center gap-2 text-sm font-semibold"><EyeOff className="h-4 w-4" />Post anonymously</div>
           <Toggle checked={anon} onChange={setAnon} label="Post anonymously" />
         </div>
-        {anon && <p className="-mt-2 text-xs text-muted">Other students will see “Anonymous”. School administrators can still identify the author for moderation and safety.</p>}
+        {anon && <p className="-mt-2 text-xs text-muted">Other students will see “Anonymous”. Nobody, including administrators, can see who wrote it. Your identity is revealed to administrators only if someone reports the post and a reviewer confirms it broke the rules.</p>}
         <div>
           <label htmlFor="wall-text" className="sr-only">Post text</label>
           <textarea id="wall-text" className="field" rows={5} maxLength={500} value={text} onChange={(e) => setText(e.target.value)} placeholder="What's on your mind?" />

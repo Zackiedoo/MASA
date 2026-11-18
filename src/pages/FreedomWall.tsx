@@ -7,17 +7,18 @@ import { PostComposer } from '../components/freedom-wall/PostComposer';
 import { PostCard } from '../components/freedom-wall/PostCard';
 import { ReportModal } from '../components/freedom-wall/ReportModal';
 import { EditPostModal } from '../components/freedom-wall/EditPostModal';
-import { Modal } from '../components/shared/Modal';
 import { CardSkeleton, Empty, ErrorBox, Spinner } from '../components/shared/States';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useValue } from '../hooks/useValue';
 import { useNow } from '../hooks/useNow';
-import { deleteOwnPost, flagPost, hidePost, removePost, revealIdentity, vote } from '../services/freedomWallService';
+import { deleteOwnPost, flagPost, hidePost, removePost, vote } from '../services/freedomWallService';
+import { MuteNotice } from '../components/shared/MuteNotice';
+import { useMute } from '../hooks/useMute';
 import { can } from '../lib/permissions';
 import { explainError } from '../lib/database';
 import { toList } from '../utils/format';
-import type { Report, WallIdentity, WallPost } from '../types';
+import type { Report, WallPost } from '../types';
 
 function Wall() {
   const { profile, uid } = useAuth();
@@ -31,10 +32,10 @@ function Wall() {
   const setting = useValue<boolean>('settings/freedomWall/requireApproval');
   const posts = useValue<Record<string, Omit<WallPost, 'id'>>>('freedomWall', { limitLast: 200, orderBy: 'createdAt' });
   const reportsRaw = useValue<Record<string, Omit<Report, 'id'>>>(isAdmin ? 'reports' : null);
+  const { mute } = useMute();
   const [composing, setComposing] = useState(false);
   const [reporting, setReporting] = useState<string | null>(null);
   const [editing, setEditing] = useState<WallPost | null>(null);
-  const [identity, setIdentity] = useState<{ id: string; who: WallIdentity | null } | null>(null);
 
   const mine = useMemo(() => new Set(Object.keys(myPosts.data ?? {})), [myPosts.data]);
   // Expired posts are hidden immediately; the server-side cleanup job deletes them for good.
@@ -52,7 +53,8 @@ function Wall() {
   return (
     <>
       <PageHeader title="FREEDOM WALL" />
-      <p className="mb-4 px-1 text-sm text-muted">{isStudent ? "Say what's on your mind, respectfully. Posts disappear on their own." : isAdmin ? 'Moderation view. You can flag, hide or remove posts and look up authors (every lookup is logged).' : 'You are viewing the Freedom Wall. Only students can post, report or edit posts.'}</p>
+      <p className="mb-4 px-1 text-sm text-muted">{isStudent ? "Say what's on your mind, respectfully. Posts disappear on their own." : isAdmin ? 'Moderation view. You can flag, hide or remove posts. Authors of anonymous posts stay hidden; they are revealed only when a report is reviewed and upheld (Admin → Freedom Wall → Reported).' : 'You are viewing the Freedom Wall. Only students can post, report or edit posts.'}</p>
+      {isStudent && <MuteNotice />}
       {posts.error ? <ErrorBox message={posts.error} /> : posts.loading ? <CardSkeleton /> : list.length === 0 ? (
         <Empty icon={<Sparkles className="h-8 w-8" />} title="The wall is quiet" hint={isStudent ? 'Be the first to post something.' : 'No active posts.'} />
       ) : (
@@ -63,26 +65,19 @@ function Wall() {
               onHide={async () => { if (confirm('Hide this post from the wall? You can restore it later from the moderation tab.')) { try { await hidePost(profile.uid, p); toast('Post hidden.'); } catch (e) { toast(explainError(e), 'error'); } } }}
               onFlag={async () => { try { await flagPost(profile.uid, p, !p.flagged); toast(p.flagged ? 'Flag removed.' : 'Post flagged.'); } catch (e) { toast(explainError(e), 'error'); } }}
               onDeleteOwn={async () => { if (confirm('Delete your post?')) { try { await deleteOwnPost(profile.uid, p.id); toast('Post deleted.'); } catch (e) { toast(explainError(e), 'error'); } } }}
-              onRemove={async () => { if (confirm('Remove this post? This cannot be undone.')) { try { await removePost(profile.uid, p, reportsByPost.get(p.id) ?? []); toast('Post removed.'); } catch (e) { toast(explainError(e), 'error'); } } }}
-              onReveal={async () => { try { setIdentity({ id: p.id, who: await revealIdentity(profile.uid, p.id) }); } catch (e) { toast(explainError(e), 'error'); } }} />
+              onRemove={async () => { if (confirm('Remove this post? This cannot be undone.')) { try { await removePost(profile.uid, p, reportsByPost.get(p.id) ?? []); toast('Post removed.'); } catch (e) { toast(explainError(e), 'error'); } } }} />
           ))}
         </div>
       )}
 
       {isStudent && (
-        <button onClick={() => setComposing(true)} className="btn btn-primary fixed bottom-24 right-4 z-30 h-14 rounded-full px-5 shadow-float lg:bottom-8 lg:right-8" aria-label="Create a post">
+        <button onClick={() => setComposing(true)} disabled={!!mute} className="btn btn-primary fixed bottom-24 right-4 z-30 h-14 rounded-full px-5 shadow-float lg:bottom-8 lg:right-8" aria-label="Create a post">
           <PenLine className="h-5 w-5" /><span className="hidden sm:inline">Post</span>
         </button>
       )}
       {isStudent && <PostComposer open={composing} onClose={() => setComposing(false)} profile={profile} requireApproval={setting.data === true} />}
       {isStudent && <EditPostModal post={editing} onClose={() => setEditing(null)} />}
       {uid && isStudent && <ReportModal postId={reporting} uid={uid} onClose={() => setReporting(null)} />}
-      <Modal open={!!identity} onClose={() => setIdentity(null)} title="Post author (admin only)">
-        {identity?.who ? (
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm"><dt className="text-muted">Name</dt><dd className="font-semibold">{identity.who.fullName}</dd><dt className="text-muted">Student ID</dt><dd className="font-semibold">{identity.who.studentId}</dd></dl>
-        ) : <p className="text-sm text-muted">No identity record found for this post.</p>}
-        <p className="mt-3 text-xs text-muted">This lookup has been recorded in the activity log. Use it only for moderation and safety.</p>
-      </Modal>
     </>
   );
 }
